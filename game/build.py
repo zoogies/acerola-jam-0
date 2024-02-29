@@ -177,6 +177,9 @@ class YoyoEngineBuildSystem:
         add_executable({self.game_name} ${{SOURCES}} ${{CUSTOM_SOURCES}} {self.script_location}/{self.build_rc_path})
         ####################
 
+        # Link the math library
+        target_link_libraries({self.game_name} PRIVATE m)
+
         # TODO: add optimization flags and stripping for binary here
 
         # lets the tricks know where to link against any deps that the game has

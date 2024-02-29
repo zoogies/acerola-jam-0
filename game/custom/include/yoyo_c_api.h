@@ -52,7 +52,7 @@ extern bool YG_RUNNING;
     Make sure you implement this as:
     void yoyo_handle_input(SDL_Event event);
 */
-// #define YOYO_HANDLE_INPUT
+#define YOYO_HANDLE_INPUT
 
 /*
     Called when lua script components are created, will send the
@@ -63,31 +63,38 @@ extern bool YG_RUNNING;
 /*
     Runs once per frame before the engine has done anything, but after the deltatime has been reset for the new frame.
 */
-// #define YOYO_PRE_FRAME
+#define YOYO_PRE_FRAME
 
 /*
     Runs once per frame after the engine has done every system, right before control is returned. Since this happens
     after rendering, either due to vsync or intenral frame delay this will run after we have hit the target amount of time
     for a frame to take.
 */
-// #define YOYO_POST_FRAME
+#define YOYO_POST_FRAME
 
 /*
     Runs once after the scene has been loaded, before the render loop.
     void yoyo_scene_load(char *scene_name);
 */
-// #define YOYO_SCENE_LOAD
+#define YOYO_SCENE_LOAD
 
 /*
     Runs once before the engine is shutdown. You can still access YE_STATE here.
 */
-// #define YOYO_PRE_SHUTDOWN
+#define YOYO_PRE_SHUTDOWN
 
 /*
     Runs once after the engine is shutdown. The engine context is completely destroyed.
     You can use this to cleanup anything extra in your game. The program will exit immediately after this function returns.
 */
 // #define YOYO_POST_SHUTDOWN
+
+/*
+    Runs once a frame, after the engine has painted everything (except UI) from the ECS
+    renderer to the next frame buffer to be presented. Use this to do things like draw debug
+    lines or information.
+*/
+#define YOYO_ADDITIONAL_RENDER
 
 
 
@@ -145,4 +152,8 @@ extern bool YG_RUNNING;
 
 #ifdef YOYO_POST_SHUTDOWN
     void yoyo_post_shutdown();
+#endif
+
+#ifdef YOYO_ADDITIONAL_RENDER
+    void yoyo_additional_render();
 #endif
