@@ -18,3 +18,8 @@ My entry into the acerola jam 0
 ENGINE
 
 - the first scene we load doesnt get the scene load callback on load since that occurs before engine fully init, so entry has to do it itself as a dumb hack
+
+## ideas
+
+question mark for bind until you located it first time
+- commentary

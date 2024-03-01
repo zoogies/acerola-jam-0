@@ -1,0 +1,10 @@
+{
+    "name": "down_cap",
+    "version": 0,
+    "src": "animations/down_cap/down_cap.png",
+    "frame_width": 64,
+    "frame_height": 64,
+    "frame_count": 2,
+    "frame_delay": 200,
+    "loops": -1
+}

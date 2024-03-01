@@ -6,6 +6,9 @@
 #define M_PI 3.14
 #endif
 
+#include "player_controller.h"
+#include "ui_controller.h"
+
 bool player_moved_this_frame;
 
 int mx = 0;
@@ -15,26 +18,42 @@ int py = 0;
 
 struct ye_entity * player_ent = NULL;
 
-/*
-    Keybinds that control how we move
-*/
-SDL_Keycode bind_left;
-SDL_Keycode bind_right;
-SDL_Keycode bind_up;
-SDL_Keycode bind_down;
+struct bind_state_data sd;
 
-bool moving_left = false;
-bool moving_right = false;
-bool moving_up = false;
-bool moving_down = false;
+
+void state_ui(struct nk_context *ctx){
+    // struct nk_context * ctx = YE_STATE.engine.ctx;
+
+    char mlb[20]; sprintf(mlb, "moving left:%d",sd.moving_left);
+    char mrb[20]; sprintf(mrb, "moving right:%d",sd.moving_right);
+    char mub[20]; sprintf(mub, "moving up:%d",sd.moving_up);
+    char mdb[20]; sprintf(mdb, "moving down:%d",sd.moving_down);
+
+    if (nk_begin(ctx, "STATE MACHINE", nk_rect(10, 10, 220, 200),
+                    NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_TITLE)) {
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_label(ctx, mlb, NK_TEXT_LEFT);
+        nk_label(ctx, mrb, NK_TEXT_LEFT);
+        nk_label(ctx, mub, NK_TEXT_LEFT);
+        nk_label(ctx, mdb, NK_TEXT_LEFT);
+    }
+    nk_end(ctx);
+}
 
 void init_player_controller(){
     player_ent = ye_get_entity_by_name("PLAYER");
 
-    bind_left = SDLK_a;
-    bind_right = SDLK_d;
-    bind_up = SDLK_w;
-    bind_down = SDLK_s;
+    sd.bind_left = SDLK_a;
+    sd.bind_right = SDLK_d;
+    sd.bind_up = SDLK_w;
+    sd.bind_down = SDLK_s;
+
+    ui_controller_attatch();
+
+    ui_register_component("player state machine",state_ui);
+
+    // DEBUG SETTINGS
+    YE_STATE.editor.colliders_visible = true;
 }
 
 void shutdown_player_controller(){
@@ -53,53 +72,30 @@ void player_controller_additional_render(){
 }
 
 /*
-    We get many events per frame, so we just flag if we are doing an action to let it execute once on post frame
+    Correct state machine when we press or release a bind
+    TODO: when binds change in the future we need to reset state machine to default
 */
 void player_bind_abstraction(SDL_Event e){
-    // if(e.type == SDL_KEYDOWN){
-    //     if(e.key.keysym.sym == bind_left){
-    //         printf("pressed left bind\n");
-    //         // player_ent->physics->velocity.x = -10;
-    //         player_moved_this_frame = true;
-    //         moving_left = true;
-    //     }
-    //     else{
-    //         moving_left = false;
-    //     }
-    //     if(e.key.keysym.sym == bind_right){
-    //         printf("pressed right bind\n");
-    //         // player_ent->physics->velocity.x = 10;
-    //         player_moved_this_frame = true;
-    //         moving_right = true;
-    //     }
-    //     else{
-    //         moving_right = false;
-    //     }
-    //     if(e.key.keysym.sym == bind_up){
-    //         printf("pressed up bind\n");
-    //         // player_ent->physics->velocity.y = -10;
-    //         player_moved_this_frame = true;
-    //         moving_up = true;
-    //     }
-    //     else{
-    //         moving_up = false;
-    //     }
-    //     if(e.key.keysym.sym == bind_down){
-    //         printf("pressed down bind\n");
-    //         // player_ent->physics->velocity.y = 10;
-    //         player_moved_this_frame = true;
-    //         moving_down = true;
-    //     }
-    //     else{
-    //         moving_down = false;
-    //     }
-    // }
-    // else{
-    //     moving_up = false;
-    //     moving_down = false;
-    //     moving_left = false;
-    //     moving_right = false;
-    // }
+    if(e.type == SDL_KEYDOWN){
+        if(e.key.keysym.sym == sd.bind_left)
+            sd.moving_left = true;
+        if(e.key.keysym.sym == sd.bind_right)
+            sd.moving_right = true;
+        if(e.key.keysym.sym == sd.bind_up)
+            sd.moving_up = true;
+        if(e.key.keysym.sym == sd.bind_down)
+            sd.moving_down = true;
+    }
+    else if(e.type == SDL_KEYUP){
+        if(e.key.keysym.sym == sd.bind_left)
+            sd.moving_left = false;
+        if(e.key.keysym.sym == sd.bind_right)
+            sd.moving_right = false;
+        if(e.key.keysym.sym == sd.bind_up)
+            sd.moving_up = false;
+        if(e.key.keysym.sym == sd.bind_down)
+            sd.moving_down = false;
+    }
 }
 
 void player_input_handler(SDL_Event e){
@@ -142,31 +138,45 @@ void player_input_handler(SDL_Event e){
 */
 
 void player_controller_pre_frame(){
-    // reset flags
-    // moving_left = false;
-    // moving_right = false;
-    // moving_up = false;
-    // moving_down = false;
+    /*
+        Schedule the velocity for this frame based on state machine
+    */
+    if(sd.moving_up && sd.moving_down)
+        player_ent->physics->velocity.y = 0.0f;
+    else if(sd.moving_up)
+        player_ent->physics->velocity.y = -300.0f;
+    else if(sd.moving_down)
+        player_ent->physics->velocity.y = 300.0f;
+
+    if(sd.moving_left && sd.moving_right)
+        player_ent->physics->velocity.x = 0.0f;
+    else if(sd.moving_left)
+        player_ent->physics->velocity.x = -300.0f;
+    else if(sd.moving_right)
+        player_ent->physics->velocity.x = 300.0f;
+
+    struct ye_rectf pos = ye_get_position(player_ent, YE_COMPONENT_TRANSFORM);
+    printf("%f,%f\n",pos.x,pos.y);
+    ui_controller_update_bind_ui(sd, pos.x, pos.y);
+
+    // WORKING NON PHYSICS SYSTEM IMPL
+    // if(moving_up && moving_down){}
+    // else if(moving_up)
+    //     player_ent->transform->y -= 300.0f * YE_STATE.runtime.delta_time;
+    // else if(moving_down)
+    //     player_ent->transform->y += 300.0f * YE_STATE.runtime.delta_time;
+
+    // if(moving_left && moving_right){}
+    // else if(moving_left)
+    //     player_ent->transform->x -= 300.0f * YE_STATE.runtime.delta_time;
+    // else if(moving_right)
+    //     player_ent->transform->x += 300.0f * YE_STATE.runtime.delta_time;
 }
 
 void player_controller_post_frame(){
-    // /*
-    //     Apply velocity based on the flags we set this frame
-    // */
-    // player_ent->physics->velocity.x = 0;
-    // player_ent->physics->velocity.y = 0;
-    
-    // if(moving_up)
-    //     player_ent->physics->velocity.y = -10;
-    // if(moving_down)
-    //     player_ent->physics->velocity.y = 10;
-    // if(moving_up && moving_down)
-    //     player_ent->physics->velocity.y = 0;
-    
-    // if(moving_left)
-    //     player_ent->physics->velocity.x = -10;
-    // if(moving_right)
-    //     player_ent->physics->velocity.x = 10;
-    // if(moving_left && moving_right)
-    //     player_ent->physics->velocity.x = 0;    
+    /*
+        Reset the vel for next frame
+    */
+    player_ent->physics->velocity.x = 0.0f;
+    player_ent->physics->velocity.y = 0.0f;
 }
