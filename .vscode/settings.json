@@ -3,6 +3,7 @@
         "*.h": "c",
         "*.yoyo": "json",
         "*.tcc": "c",
-        "stop_token": "c"
+        "stop_token": "c",
+        "random": "c"
     }
 }

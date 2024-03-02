@@ -20,7 +20,6 @@ struct ye_entity * player_ent = NULL;
 
 struct bind_state_data sd;
 
-
 void state_ui(struct nk_context *ctx){
     // struct nk_context * ctx = YE_STATE.engine.ctx;
 
@@ -50,6 +49,8 @@ void init_player_controller(){
 
     ui_controller_attatch();
 
+    ui_refresh_bind_labels(sd);
+
     ui_register_component("player state machine",state_ui);
 
     // DEBUG SETTINGS
@@ -77,24 +78,40 @@ void player_controller_additional_render(){
 */
 void player_bind_abstraction(SDL_Event e){
     if(e.type == SDL_KEYDOWN){
-        if(e.key.keysym.sym == sd.bind_left)
+        if(e.key.keysym.sym == sd.bind_left){
             sd.moving_left = true;
-        if(e.key.keysym.sym == sd.bind_right)
+            sd.discovered_left_bind = true;
+            sd.discovered_bind_this_frame = true;
+        }
+        if(e.key.keysym.sym == sd.bind_right){
             sd.moving_right = true;
-        if(e.key.keysym.sym == sd.bind_up)
+            sd.discovered_right_bind = true;
+            sd.discovered_bind_this_frame = true;
+        }
+        if(e.key.keysym.sym == sd.bind_up){
             sd.moving_up = true;
-        if(e.key.keysym.sym == sd.bind_down)
+            sd.discovered_up_bind = true;
+            sd.discovered_bind_this_frame = true;
+        }
+        if(e.key.keysym.sym == sd.bind_down){
             sd.moving_down = true;
+            sd.discovered_down_bind = true;
+            sd.discovered_bind_this_frame = true;
+        }
     }
     else if(e.type == SDL_KEYUP){
-        if(e.key.keysym.sym == sd.bind_left)
+        if(e.key.keysym.sym == sd.bind_left){
             sd.moving_left = false;
-        if(e.key.keysym.sym == sd.bind_right)
+        }
+        if(e.key.keysym.sym == sd.bind_right){
             sd.moving_right = false;
-        if(e.key.keysym.sym == sd.bind_up)
+        }
+        if(e.key.keysym.sym == sd.bind_up){
             sd.moving_up = false;
-        if(e.key.keysym.sym == sd.bind_down)
+        }
+        if(e.key.keysym.sym == sd.bind_down){
             sd.moving_down = false;
+        }
     }
 }
 
@@ -156,7 +173,7 @@ void player_controller_pre_frame(){
         player_ent->physics->velocity.x = 300.0f;
 
     struct ye_rectf pos = ye_get_position(player_ent, YE_COMPONENT_TRANSFORM);
-    printf("%f,%f\n",pos.x,pos.y);
+    // printf("%f,%f\n",pos.x,pos.y);
     ui_controller_update_bind_ui(sd, pos.x, pos.y);
 
     // WORKING NON PHYSICS SYSTEM IMPL
@@ -179,4 +196,35 @@ void player_controller_post_frame(){
     */
     player_ent->physics->velocity.x = 0.0f;
     player_ent->physics->velocity.y = 0.0f;
+
+    // char * test = keycode_to_label(SDLK_w); 
+    // if(test != NULL)
+    //     printf("%s\n",test);
+    // else
+    //     printf("fail\n");
+    // if(test != NULL)
+    //     free(test);
 }
+
+void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity * e2){
+    // randomize our abilities if we hit a randomizer, and remove that trigger
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
+        sd.bind_up = SDLK_s;
+        sd.bind_down = SDLK_w;
+        sd.bind_right = SDLK_a;
+        sd.bind_left = SDLK_d;
+        sd.discovered_up_bind = false;
+        sd.discovered_down_bind = false;
+        sd.discovered_left_bind = false;
+        sd.discovered_right_bind = false;
+        ui_refresh_bind_labels(sd);
+        ye_destroy_entity(e2);
+    }
+}
+
+/*
+    SHAPING:
+
+    - binds are hidden until you hit them
+        - REQUIRES a state to only update screen binds when needed or hit first time
+*/

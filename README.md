@@ -22,4 +22,6 @@ ENGINE
 ## ideas
 
 question mark for bind until you located it first time
+
 - commentary
+- heartbeat monitor for health

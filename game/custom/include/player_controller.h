@@ -20,6 +20,13 @@ struct bind_state_data {
     bool moving_right;
     bool moving_up;
     bool moving_down;
+
+    bool discovered_left_bind;
+    bool discovered_right_bind;
+    bool discovered_up_bind;
+    bool discovered_down_bind;
+
+    bool discovered_bind_this_frame;
 };
 
 void init_player_controller();
@@ -33,5 +40,7 @@ void player_controller_additional_render();
 void player_controller_pre_frame();
 
 void player_controller_post_frame();
+
+void player_controller_trigger_handler(struct ye_entity *e1, struct ye_entity *e2);
 
 #endif

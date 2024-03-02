@@ -89,3 +89,9 @@ void yoyo_post_frame(){
             break;
     }
 }
+
+void yoyo_trigger_enter(struct ye_entity *e1, struct ye_entity *e2){
+    printf("%s was entered by %s\n",e1->name, e2->name);
+
+    player_controller_trigger_handler(e1,e2);
+}
