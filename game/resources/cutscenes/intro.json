@@ -1,0 +1,13 @@
+{
+    "events":[
+        {
+            "bg":"images/cutscene_intro/1.png",
+            "sfx":"sfx/cutscene_intro/knock.mp3"
+        },
+        {
+            "bg":"images/cutscene_intro/1.png",
+            "speaker":"You",
+            "text":"Who's knocking at this hour?"
+        }
+    ]
+}

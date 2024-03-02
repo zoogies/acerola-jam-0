@@ -5,9 +5,11 @@
 
 #include "yoyo_c_api.h"
 #include "player_controller.h"
+#include "cutscene_manager.h"
 
 enum scenes {
     MAINMENU,
+    INTRO_CUTSCENE,
     LAB
 };
 
@@ -17,6 +19,20 @@ enum scenes current_scene;
     On scene load, check what scene we are on and init or destruct things as needed
 */
 void yoyo_scene_load(char *scene_name){
+    enum scenes last_scene = current_scene;
+
+    if(strcmp(scene_name, "cutscene_base") == 0){
+        if(current_scene != INTRO_CUTSCENE){
+            init_cutscene("cutscenes/intro.json");
+        }
+        current_scene = INTRO_CUTSCENE;
+    }
+    else{
+        if(last_scene == INTRO_CUTSCENE){
+            shutdown_cutscene();
+        }
+    }
+    
     if(strcmp(scene_name, "lab") == 0){
         if(current_scene != LAB){
             init_player_controller();
@@ -24,7 +40,7 @@ void yoyo_scene_load(char *scene_name){
         current_scene = LAB;
     }
     else{
-        if(current_scene == LAB){
+        if(last_scene == LAB){
             shutdown_player_controller();
         }
     }
@@ -65,7 +81,11 @@ void yoyo_pre_frame(){
 
 void yoyo_post_frame(){
     switch(current_scene){
+        case INTRO_CUTSCENE:
+            cutscene_poll();
+            break;
         case LAB:
             player_controller_post_frame();
+            break;
     }
 }

@@ -1,1 +1,43 @@
-{"version":0,"fonts":{"satan":{"path":"fonts/who asks satan.ttf"}},"colors":{"blue":{"r":0,"g":0,"b":255,"a":255},"green":{"r":0,"g":255,"b":0,"a":255},"red":{"r":255,"g":0,"b":0,"a":255},"white":{"r":255,"g":255,"b":255,"a":255},"black":{"r":0,"g":0,"b":0,"a":255}}}
+{
+    "version": 0,
+    "fonts": {
+        "satan": {
+            "path": "fonts/who asks satan.ttf"
+        },
+        "handwriting": {
+            "path": "fonts/SingleDay-Regular.ttf"
+        }
+    },
+    "colors": {
+        "blue": {
+            "r": 0,
+            "g": 0,
+            "b": 255,
+            "a": 255
+        },
+        "green": {
+            "r": 0,
+            "g": 255,
+            "b": 0,
+            "a": 255
+        },
+        "red": {
+            "r": 255,
+            "g": 0,
+            "b": 0,
+            "a": 255
+        },
+        "white": {
+            "r": 255,
+            "g": 255,
+            "b": 255,
+            "a": 255
+        },
+        "black": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 255
+        }
+    }
+}
