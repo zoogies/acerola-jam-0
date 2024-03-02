@@ -14,6 +14,13 @@ struct ye_entity * left_text = NULL;
 struct ye_entity * right_text = NULL;
 
 struct ye_entity * vignette = NULL;
+struct ye_entity * bloody_vignette = NULL;
+struct ye_entity * darken = NULL;
+
+/*
+    Film grain
+*/
+SDL_Texture * tex_noise[20];
 
 void ui_controller_attatch(){
     up_key = ye_get_entity_by_name("w_key");
@@ -27,6 +34,30 @@ void ui_controller_attatch(){
     right_text = ye_get_entity_by_name("right_text");
     
     vignette = ye_get_entity_by_name("vignette");
+    darken = ye_get_entity_by_name("dark overlay");
+    bloody_vignette = ye_get_entity_by_name("bloody_vingette");
+
+    // film grain
+
+    unsigned char buff[640*360*3];
+    int x, y;
+
+    for(x = 0; x < 20; x++)  // create 20 noise textures to draw over screen
+    {
+        for(y = 0; y < 640*360; y++)
+        {
+            unsigned char c = rand()%255;
+            buff[y*3] = c;    // red
+            buff[y*3+1] = c;    // green
+            buff[y*3+2] = c;    // blue
+        }
+
+        // create texture  and set its blending properties
+        tex_noise[x] = SDL_CreateTexture(YE_STATE.runtime.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STATIC, 640, 360);
+        SDL_UpdateTexture(tex_noise[x], 0, buff, 640*3);
+        SDL_SetTextureBlendMode(tex_noise[x], SDL_BLENDMODE_BLEND);
+        SDL_SetTextureAlphaMod(tex_noise[x], 20); // set strength of texture blend from 0-255
+    }
 }
 
 /*
@@ -197,4 +228,116 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
 
     vignette->transform->x = x;
     vignette->transform->y = y;
+    bloody_vignette->transform->x = x;
+    bloody_vignette->transform->y = y;
+    darken->transform->x = x;
+    darken->transform->y = y;
+}
+
+/*
+    Post processing like film grain
+*/
+void ui_controller_additional_render(){
+    // film grain
+    SDL_RenderCopy(YE_STATE.runtime.renderer, tex_noise[rand()%20], 0, 0);
+}
+
+bool transforming_ui = false;
+int transform_start = 0;
+int transform_end = 0;
+int transform_duration = 5000;
+int transform_fade_in = 500;
+int transform_fade_out = 2000;
+int transform_poll_interval = 10;
+
+void ui_transform_routine(){
+    // printf("reached timer routine\n");
+    int current_time = SDL_GetTicks() - transform_start; // offset so we just view times as relative to animation
+    
+    // if we are done transforming
+    if(current_time > transform_end){
+        transforming_ui = false;
+        bloody_vignette->active = false;
+        return;
+    }
+
+    /*
+        0ms     - 0 / 500   = 255 * 0.0
+        100ms   - 100 / 500 = 255 * 0.2
+        200ms   - 200 / 500 = 255 * 0.4
+    */
+
+    // float percent_through_animation = (float)( (float)current_time / (float)transform_end);
+
+    // printf("p: %f\n",percent_through_animation);
+
+    int res;
+
+    // during fade in, fade it in to 100% opacity over the fade in duration
+    if(current_time < transform_fade_in){
+        // printf("%d/%d\n",current_time,transform_fade_in);
+        float percent_through_fade_in = (float)( (float)current_time / (float)(transform_fade_in));
+        // printf("percent through fade in: %f\n",percent_through_fade_in);
+
+        // int alpha = (int)(255 * (float)(current_time / (transform_start + transform_fade_in)));
+        int alpha = (int)((float)255 * percent_through_fade_in);
+        // printf("fading in: %d\n",alpha);
+        // res = SDL_SetTextureAlphaMod(bloody_vignette->renderer->texture,alpha); // ugly cast but whateva
+        bloody_vignette->renderer->alpha = alpha;
+    }
+    // between fade in and out when we are supposed to be full opacity
+    else if(current_time > transform_fade_in && current_time < transform_end - transform_fade_out){
+        int alpha = 255;
+        // printf("sustain: %d\n",alpha);
+        // res = SDL_SetTextureAlphaMod(bloody_vignette->renderer->texture, alpha);
+        bloody_vignette->renderer->alpha = alpha;
+    }
+    // fade out
+    else{
+        float time_until_fade_starts = transform_end - transform_fade_out;
+        float percent_fade_out = (float)( ((float)current_time - time_until_fade_starts) / ((float)(transform_end) - time_until_fade_starts));
+
+        // printf("p fade out: %f\n",percent_fade_out);
+
+        int alpha = 255 - (int)((float)255 * percent_fade_out);
+        // printf("fading out: %d\n",alpha);
+        // res = SDL_SetTextureAlphaMod(bloody_vignette->renderer->texture, alpha); // ugly cast but whateva
+        bloody_vignette->renderer->alpha = alpha;
+    }
+
+    // if(res == -1)
+        // printf("FUCK\n");
+    
+    // int v; SDL_GetTextureAlphaMod(bloody_vignette->renderer->texture,&v);
+    // printf("current alpha is %d\n",v);
+
+    // re schedule timer again (we do this to elimating culumatative cpu scheduler related time loss)
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = ui_transform_routine;
+    t->length_ms = transform_poll_interval; // poll every 100ms
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
+void begin_ui_transform_blood(){
+    if(transforming_ui)
+        return;
+    
+    transforming_ui = true;
+    bloody_vignette->active = true;
+    bloody_vignette->renderer->alpha = 0; // set here because it wont update until first timer run (longer than one frame)
+
+    transform_start = SDL_GetTicks();
+    transform_end = transform_duration;
+
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = ui_transform_routine;
+    t->length_ms = transform_poll_interval; // poll every 100ms
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+    // printf("registered timer\n");
+
+    SDL_SetTextureAlphaMod(bloody_vignette->renderer->texture, 0);
 }

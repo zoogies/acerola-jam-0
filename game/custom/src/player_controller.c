@@ -1,6 +1,9 @@
 
-#include <yoyoengine/yoyoengine.h>
 #include <math.h>
+#include <stdlib.h>
+
+#include <yoyoengine/yoyoengine.h>
+
 // hack to disable error (at compile time this is defined by libm):
 #ifndef M_PI
 #define M_PI 3.14
@@ -19,6 +22,20 @@ int py = 0;
 struct ye_entity * player_ent = NULL;
 
 struct bind_state_data sd;
+
+/*
+    Footstep controller vars
+*/
+const char step_sounds[6][50] = {
+    "sfx/footstep/concrete/1.mp3",
+    "sfx/footstep/concrete/2.mp3",
+    "sfx/footstep/concrete/3.mp3",
+    "sfx/footstep/concrete/4.mp3",
+    "sfx/footstep/concrete/5.mp3",
+    "sfx/footstep/concrete/6.mp3"
+};
+
+bool footstep_cooldown = false;
 
 void state_ui(struct nk_context *ctx){
     // struct nk_context * ctx = YE_STATE.engine.ctx;
@@ -55,6 +72,8 @@ void init_player_controller(){
 
     // DEBUG SETTINGS
     YE_STATE.editor.colliders_visible = true;
+
+    ui_register_component("timer view", ye_timer_overlay);
 }
 
 void shutdown_player_controller(){
@@ -148,6 +167,11 @@ void player_input_handler(SDL_Event e){
     // TODO: optimization, do this once a frame instead of once an event (can be many in a frame)
 }
 
+void cancel_footstep_cooldown(){
+    footstep_cooldown = false;
+}
+
+
 /*
     Here we will route through custom input handler and then into the player controller,
     use some kind of state machine to define up down left right and actions, then we just have an 
@@ -171,6 +195,30 @@ void player_controller_pre_frame(){
         player_ent->physics->velocity.x = -300.0f;
     else if(sd.moving_right)
         player_ent->physics->velocity.x = 300.0f;
+
+    /*
+        If we are moving at all, lets play a sound if we arent on cooldown
+    */
+    if(
+        (sd.moving_down || sd.moving_up || sd.moving_left || sd.moving_right)
+        && !footstep_cooldown
+    ){
+        footstep_cooldown = true;
+
+        // register timer to reset cooldown in 1 second
+        struct ye_timer * ft = malloc(sizeof(struct ye_timer));
+        ft->callback = cancel_footstep_cooldown;
+        ft->start_ticks = -1;
+        ft->length_ms = 500;
+        ft->loops = 0;
+        ye_register_timer(ft);
+
+        // pick a footstep sound and play it
+        int roll = rand() % sizeof(step_sounds) / sizeof(step_sounds[0]);
+        // printf("rolled sound %d\n",roll);
+
+        ye_play_sound(step_sounds[roll],0,0.5f);
+    }
 
     struct ye_rectf pos = ye_get_position(player_ent, YE_COMPONENT_TRANSFORM);
     // printf("%f,%f\n",pos.x,pos.y);
@@ -206,18 +254,30 @@ void player_controller_post_frame(){
     //     free(test);
 }
 
+void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Keycode new_bind_left, SDL_Keycode new_bind_right){
+    // play transform sound
+    ye_play_sound("sfx/transform.mp3", 0, 1.0f);
+    begin_ui_transform_blood();
+    
+    sd.bind_up = new_bind_up;
+    sd.bind_down = new_bind_down;
+    sd.bind_right = new_bind_left;
+    sd.bind_left = new_bind_right;
+    sd.discovered_up_bind = false;
+    sd.discovered_down_bind = false;
+    sd.discovered_left_bind = false;
+    sd.discovered_right_bind = false;
+    sd.moving_up = false;
+    sd.moving_down = false;
+    sd.moving_left = false;
+    sd.moving_right = false;
+    ui_refresh_bind_labels(sd);
+}
+
 void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity * e2){
     // randomize our abilities if we hit a randomizer, and remove that trigger
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
-        sd.bind_up = SDLK_s;
-        sd.bind_down = SDLK_w;
-        sd.bind_right = SDLK_a;
-        sd.bind_left = SDLK_d;
-        sd.discovered_up_bind = false;
-        sd.discovered_down_bind = false;
-        sd.discovered_left_bind = false;
-        sd.discovered_right_bind = false;
-        ui_refresh_bind_labels(sd);
+        player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d);
         ye_destroy_entity(e2);
     }
 }

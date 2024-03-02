@@ -25,3 +25,8 @@ question mark for bind until you located it first time
 
 - commentary
 - heartbeat monitor for health
+
+## transfomration
+
+- ear ringing
+- loud heartbeat in background

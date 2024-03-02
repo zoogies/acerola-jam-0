@@ -6,6 +6,7 @@
 #include "yoyo_c_api.h"
 #include "player_controller.h"
 #include "cutscene_manager.h"
+#include "ui_controller.h"
 
 enum scenes {
     MAINMENU,
@@ -68,6 +69,7 @@ void yoyo_pre_shutdown(){
 void yoyo_additional_render(){
     switch(current_scene){
         case LAB:
+            ui_controller_additional_render();
             player_controller_additional_render();
     }
 }
