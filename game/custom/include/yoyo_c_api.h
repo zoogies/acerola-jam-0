@@ -102,6 +102,11 @@ extern bool YG_RUNNING;
 */
 #define YOYO_TRIGGER_ENTER
 
+/*
+    Fires when two static colliders hit, returns the source and the target entities
+*/
+#define YOYO_COLLISION
+
 
 
 /*
@@ -166,4 +171,8 @@ extern bool YG_RUNNING;
 
 #ifdef YOYO_TRIGGER_ENTER
     void yoyo_trigger_enter();
+#endif
+
+#ifdef YOYO_COLLISION
+    void yoyo_collision();
 #endif

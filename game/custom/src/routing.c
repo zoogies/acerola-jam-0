@@ -7,6 +7,7 @@
 #include "player_controller.h"
 #include "cutscene_manager.h"
 #include "ui_controller.h"
+#include "enemy_controller.h"
 
 enum scenes {
     MAINMENU,
@@ -37,12 +38,14 @@ void yoyo_scene_load(char *scene_name){
     if(strcmp(scene_name, "lab") == 0){
         if(current_scene != LAB){
             init_player_controller();
+            enemy_controller_init();
         }
         current_scene = LAB;
     }
     else{
         if(last_scene == LAB){
             shutdown_player_controller();
+            enemy_controller_shutdown();
         }
     }
 }
@@ -78,6 +81,8 @@ void yoyo_pre_frame(){
     switch(current_scene){
         case LAB:
             player_controller_pre_frame();
+            enemy_controller_update();
+        break;
     }
 }
 
@@ -93,7 +98,11 @@ void yoyo_post_frame(){
 }
 
 void yoyo_trigger_enter(struct ye_entity *e1, struct ye_entity *e2){
-    printf("%s was entered by %s\n",e1->name, e2->name);
+    printf("%s was entered by %s\n",e2->name, e1->name);
 
     player_controller_trigger_handler(e1,e2);
+}
+
+void yoyo_collision(struct ye_entity *e1, struct ye_entity *e2){
+    printf("%s collided with %s\n",e2->name, e1->name);
 }

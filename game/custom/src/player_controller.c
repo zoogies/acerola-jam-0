@@ -390,6 +390,7 @@ void begin_arm_attack_anim(){
         return;
     }
     
+    ye_play_sound("sfx/armswing.mp3",0,0.75f);
     arm_attacking = true;
     arm_attack_start = SDL_GetTicks();
     arm_ent->active = true;
