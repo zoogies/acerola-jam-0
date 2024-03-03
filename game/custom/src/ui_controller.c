@@ -7,35 +7,142 @@ struct ye_entity * up_key = NULL;
 struct ye_entity * down_key = NULL;
 struct ye_entity * left_key = NULL;
 struct ye_entity * right_key = NULL;
+struct ye_entity * attack_key = NULL;
 
 struct ye_entity * up_text = NULL;
 struct ye_entity * down_text = NULL;
 struct ye_entity * left_text = NULL;
 struct ye_entity * right_text = NULL;
+struct ye_entity * attack_text = NULL;
 
 struct ye_entity * vignette = NULL;
 struct ye_entity * bloody_vignette = NULL;
 struct ye_entity * darken = NULL;
+
+// monitor
+struct ye_entity * monitor = NULL;
+struct ye_entity * monitor_graph = NULL;
+struct ye_entity * monitor_heartrate = NULL;
 
 /*
     Film grain
 */
 SDL_Texture * tex_noise[20];
 
+/*
+    Heartrate monitor timer state
+*/
+int heartrate = 80; // try to keep heartrate 80-220
+int hr_interval = 1250;
+int hr_poll_interval = 50;
+int last_hr_tick = 0;
+
+void set_heartrate(int hr){
+    heartrate = hr;
+
+    hr_interval = 2500 - (heartrate * 10);
+
+    // make sure that our animation is playing at the right rate
+    int num_frames = monitor_graph->renderer->renderer_impl.animation->frame_count;
+
+    int desired_delay = hr_interval / num_frames;
+    monitor_graph->renderer->renderer_impl.animation->frame_delay = desired_delay;
+
+    _randomize_heartrate_text();
+}
+
+/*
+    Responsible for speeding up/slowing down HR sounds and display
+*/
+void heartrate_monitor_poll(){
+    hr_interval = 2500 - (heartrate * 10);
+
+    int current_ticks = SDL_GetTicks();
+    if(current_ticks - last_hr_tick > hr_interval){
+        last_hr_tick = current_ticks;
+
+        int channel = ye_play_sound("sfx/monitor/beep.mp3", 0, 1.0f);
+        Mix_SetPosition(channel, 135, 10);
+        // printf("badump\n");
+
+        // make sure that our animation is playing at the right rate
+        int num_frames = monitor_graph->renderer->renderer_impl.animation->frame_count;
+
+        int desired_delay = hr_interval / num_frames;
+        monitor_graph->renderer->renderer_impl.animation->frame_delay = desired_delay;
+    }
+
+    // re schedule timer
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = heartrate_monitor_poll;
+    t->length_ms = hr_poll_interval;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
+void _randomize_heartrate_text(){
+    free(monitor_heartrate->renderer->renderer_impl.text->text);
+    char n[3];
+    int offset = (rand() % 10) - 5;
+    sprintf(n, "%d", heartrate + offset); 
+    monitor_heartrate->renderer->renderer_impl.text->text = strdup(n);
+    ye_update_renderer_component(monitor_heartrate);
+}
+
+void randomize_heartrate_text(){
+    _randomize_heartrate_text();
+
+    // re schedule to run
+    struct ye_timer * t2 = malloc(sizeof(struct ye_timer));
+    t2->callback = randomize_heartrate_text;
+    
+    if(heartrate > 180){
+        t2->length_ms = (rand() % 300) + 300;
+    }
+    else if(heartrate > 100){
+        t2->length_ms = (rand() % 600) + 600;
+    }
+    else{
+        t2->length_ms = (rand() % 600) + 1000;
+    }
+    t2->loops = 0;
+    t2->start_ticks = SDL_GetTicks();
+    ye_register_timer(t2);
+}
+
 void ui_controller_attatch(){
     up_key = ye_get_entity_by_name("w_key");
     down_key = ye_get_entity_by_name("s_key");
     left_key = ye_get_entity_by_name("a_key");
     right_key = ye_get_entity_by_name("d_key");
+    attack_key = ye_get_entity_by_name("attack_key");
 
     up_text = ye_get_entity_by_name("up_text");
     down_text = ye_get_entity_by_name("down_text");
     left_text = ye_get_entity_by_name("left_text");
     right_text = ye_get_entity_by_name("right_text");
+    attack_text = ye_get_entity_by_name("attack_text");
     
     vignette = ye_get_entity_by_name("vignette");
     darken = ye_get_entity_by_name("dark overlay");
     bloody_vignette = ye_get_entity_by_name("bloody_vingette");
+
+    monitor = ye_get_entity_by_name("monitor");
+    monitor_graph = ye_get_entity_by_name("monitor_graph");
+    monitor_heartrate = ye_get_entity_by_name("monitor_heartrate");
+    SDL_SetTextureColorMod(monitor_graph->renderer->texture, 0, 255, 0); // make it bright green in engine
+
+    // setup timer for monitor
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = heartrate_monitor_poll;
+    t->length_ms = hr_poll_interval;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+
+    // other monitor timer that makes heartrate vary a little bit
+    randomize_heartrate_text();
 
     // film grain
 
@@ -148,6 +255,14 @@ void ui_refresh_bind_labels(struct bind_state_data sd){
     else
         right_text->renderer->renderer_impl.text->text = strdup("?");
     ye_update_renderer_component(right_text);
+
+    // attack
+    free(attack_text->renderer->renderer_impl.text->text);
+    if(sd.discovered_attack_bind)
+        attack_text->renderer->renderer_impl.text->text = keycode_to_label(sd.bind_attack);
+    else
+        attack_text->renderer->renderer_impl.text->text = strdup("?");
+    ye_update_renderer_component(attack_text);
 }
 
 /*
@@ -198,6 +313,16 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     }
 
     /*
+        Attack
+    */
+    if(sd.attacking){
+        SDL_SetTextureColorMod(attack_key->renderer->texture, 255, 0, 0);
+    }
+    else{
+        SDL_SetTextureColorMod(attack_key->renderer->texture, 255, 255, 255);
+    }
+
+    /*
         If we discoevered a bind this frame, refresh the bind labels
     */
     if(sd.discovered_bind_this_frame){
@@ -216,6 +341,8 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     left_key->transform->y = y;
     right_key->transform->x = x;
     right_key->transform->y = y;
+    attack_key->transform->x = x;
+    attack_key->transform->y = y;
 
     up_text->transform->x = x;
     up_text->transform->y = y;
@@ -225,6 +352,8 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     left_text->transform->y = y;
     right_text->transform->x = x;
     right_text->transform->y = y;
+    attack_text->transform->x = x;
+    attack_text->transform->y = y;
 
     vignette->transform->x = x;
     vignette->transform->y = y;
@@ -232,6 +361,13 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     bloody_vignette->transform->y = y;
     darken->transform->x = x;
     darken->transform->y = y;
+
+    monitor->transform->x = x;
+    monitor->transform->y = y;
+    monitor_graph->transform->x = x;
+    monitor_graph->transform->y = y;
+    monitor_heartrate->transform->x = x;
+    monitor_heartrate->transform->y = y;
 }
 
 /*
@@ -258,6 +394,7 @@ void ui_transform_routine(){
     if(current_time > transform_end){
         transforming_ui = false;
         bloody_vignette->active = false;
+        set_heartrate(80);
         return;
     }
 
@@ -324,6 +461,7 @@ void begin_ui_transform_blood(){
     if(transforming_ui)
         return;
     
+    set_heartrate(200);
     transforming_ui = true;
     bloody_vignette->active = true;
     bloody_vignette->renderer->alpha = 0; // set here because it wont update until first timer run (longer than one frame)

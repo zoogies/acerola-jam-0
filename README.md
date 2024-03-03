@@ -30,3 +30,13 @@ question mark for bind until you located it first time
 
 - ear ringing
 - loud heartbeat in background
+
+## todo today
+
+enemy ai
+
+arm attack
+
+health meter
+
+"death" animation

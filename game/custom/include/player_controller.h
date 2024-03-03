@@ -12,6 +12,7 @@ struct bind_state_data {
     SDL_Keycode bind_right;
     SDL_Keycode bind_up;
     SDL_Keycode bind_down;
+    SDL_Keycode bind_attack;
 
     /*
         State machine
@@ -20,11 +21,13 @@ struct bind_state_data {
     bool moving_right;
     bool moving_up;
     bool moving_down;
+    bool attacking;
 
     bool discovered_left_bind;
     bool discovered_right_bind;
     bool discovered_up_bind;
     bool discovered_down_bind;
+    bool discovered_attack_bind;
 
     bool discovered_bind_this_frame;
 };

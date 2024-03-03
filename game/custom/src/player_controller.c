@@ -19,9 +19,22 @@ int my = 0;
 int px = 0;
 int py = 0;
 
+float player_look_angle = 0.0f;
+
 struct ye_entity * player_ent = NULL;
+struct ye_entity * arm_ent = NULL;
 
 struct bind_state_data sd;
+
+/*
+    State related to arm animation attack
+*/
+bool    arm_attacking               = false;
+int     arm_attack_duration         = 500;
+int     arm_attack_cooldown         = 500;
+int     arm_attack_poll_interval    = 5;
+int     arm_attack_start            = 0;
+float   arm_attack_relative_start   = 75.0f;
 
 /*
     Footstep controller vars
@@ -44,6 +57,7 @@ void state_ui(struct nk_context *ctx){
     char mrb[20]; sprintf(mrb, "moving right:%d",sd.moving_right);
     char mub[20]; sprintf(mub, "moving up:%d",sd.moving_up);
     char mdb[20]; sprintf(mdb, "moving down:%d",sd.moving_down);
+    char att[20]; sprintf(att, "attacking:%d",sd.attacking);
 
     if (nk_begin(ctx, "STATE MACHINE", nk_rect(10, 10, 220, 200),
                     NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_TITLE)) {
@@ -52,17 +66,22 @@ void state_ui(struct nk_context *ctx){
         nk_label(ctx, mrb, NK_TEXT_LEFT);
         nk_label(ctx, mub, NK_TEXT_LEFT);
         nk_label(ctx, mdb, NK_TEXT_LEFT);
+        nk_label(ctx, att, NK_TEXT_LEFT);
     }
     nk_end(ctx);
 }
 
 void init_player_controller(){
     player_ent = ye_get_entity_by_name("PLAYER");
+    arm_ent = ye_get_entity_by_name("ARM");
+    // set the center of rotation (engine does not serialize this)
+    // arm_ent->renderer->center = (SDL_Point){0, arm_ent->renderer->rect.h}; // bottom left corner
 
     sd.bind_left = SDLK_a;
     sd.bind_right = SDLK_d;
     sd.bind_up = SDLK_w;
     sd.bind_down = SDLK_s;
+    sd.bind_attack = SDLK_f;
 
     ui_controller_attatch();
 
@@ -78,6 +97,7 @@ void init_player_controller(){
 
 void shutdown_player_controller(){
     player_ent = NULL;
+    arm_ent = NULL;
 }
 
 void player_controller_additional_render(){
@@ -99,23 +119,44 @@ void player_bind_abstraction(SDL_Event e){
     if(e.type == SDL_KEYDOWN){
         if(e.key.keysym.sym == sd.bind_left){
             sd.moving_left = true;
-            sd.discovered_left_bind = true;
-            sd.discovered_bind_this_frame = true;
+            if(!sd.discovered_left_bind){
+                sd.discovered_left_bind = true;
+                sd.discovered_bind_this_frame = true;
+            }
         }
         if(e.key.keysym.sym == sd.bind_right){
             sd.moving_right = true;
-            sd.discovered_right_bind = true;
-            sd.discovered_bind_this_frame = true;
+            if(!sd.discovered_right_bind){
+                sd.discovered_right_bind = true;
+                sd.discovered_bind_this_frame = true;
+            }
         }
         if(e.key.keysym.sym == sd.bind_up){
             sd.moving_up = true;
-            sd.discovered_up_bind = true;
-            sd.discovered_bind_this_frame = true;
+            if(!sd.discovered_up_bind){
+                sd.discovered_up_bind = true;
+                sd.discovered_bind_this_frame = true;
+            }
         }
         if(e.key.keysym.sym == sd.bind_down){
             sd.moving_down = true;
-            sd.discovered_down_bind = true;
-            sd.discovered_bind_this_frame = true;
+            if(!sd.discovered_down_bind){
+                sd.discovered_down_bind = true;
+                sd.discovered_bind_this_frame = true;
+            }
+        }
+        if(e.key.keysym.sym == sd.bind_attack){
+            // printf("pressed attack bind\n");
+            // arm_attacking = true;
+            sd.attacking = true;
+            if(!arm_attacking){
+                // printf("!arm_attacking, dispatching begin call\n");
+                begin_arm_attack_anim();
+            }
+            if(!sd.discovered_attack_bind){
+                sd.discovered_attack_bind = true;
+                sd.discovered_bind_this_frame = true;
+            }
         }
     }
     else if(e.type == SDL_KEYUP){
@@ -130,6 +171,9 @@ void player_bind_abstraction(SDL_Event e){
         }
         if(e.key.keysym.sym == sd.bind_down){
             sd.moving_down = false;
+        }
+        if(e.key.keysym.sym == sd.bind_attack){
+            sd.attacking = false;
         }
     }
 }
@@ -157,7 +201,8 @@ void player_input_handler(SDL_Event e){
     int dx = mx - px;
     int dy = my - py;
     double angle = atan2(dy,dx) * (180.0 / M_PI) + 90;
-    player_ent->renderer->rotation = (float)angle;
+    player_look_angle = (float)angle;
+    // player_ent->renderer->rotation = (float)angle;
 
     /*
         Handle movement
@@ -224,6 +269,10 @@ void player_controller_pre_frame(){
     // printf("%f,%f\n",pos.x,pos.y);
     ui_controller_update_bind_ui(sd, pos.x, pos.y);
 
+    // make sure the arm is tracked to the player
+    arm_ent->transform->x = player_ent->transform->x;
+    arm_ent->transform->y = player_ent->transform->y;
+
     // WORKING NON PHYSICS SYSTEM IMPL
     // if(moving_up && moving_down){}
     // else if(moving_up)
@@ -245,6 +294,11 @@ void player_controller_post_frame(){
     player_ent->physics->velocity.x = 0.0f;
     player_ent->physics->velocity.y = 0.0f;
 
+    /*
+        Set the look angle
+    */
+    player_ent->renderer->rotation = player_look_angle;
+
     // char * test = keycode_to_label(SDLK_w); 
     // if(test != NULL)
     //     printf("%s\n",test);
@@ -254,7 +308,7 @@ void player_controller_post_frame(){
     //     free(test);
 }
 
-void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Keycode new_bind_left, SDL_Keycode new_bind_right){
+void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Keycode new_bind_left, SDL_Keycode new_bind_right, SDL_Keycode new_bind_attack){
     // play transform sound
     ye_play_sound("sfx/transform.mp3", 0, 1.0f);
     begin_ui_transform_blood();
@@ -263,23 +317,92 @@ void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Ke
     sd.bind_down = new_bind_down;
     sd.bind_right = new_bind_left;
     sd.bind_left = new_bind_right;
+    sd.bind_attack = new_bind_attack;
     sd.discovered_up_bind = false;
     sd.discovered_down_bind = false;
     sd.discovered_left_bind = false;
     sd.discovered_right_bind = false;
+    sd.discovered_attack_bind = false;
     sd.moving_up = false;
     sd.moving_down = false;
     sd.moving_left = false;
     sd.moving_right = false;
+    sd.attacking = false;
     ui_refresh_bind_labels(sd);
 }
 
 void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity * e2){
     // randomize our abilities if we hit a randomizer, and remove that trigger
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
-        player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d);
+        player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d, SDLK_e);
         ye_destroy_entity(e2);
     }
+}
+
+void arm_attack_cb_poll(){
+    int current_time = SDL_GetTicks() - arm_attack_start;
+
+    // check if animation should be over
+    if(current_time > arm_attack_duration){
+        arm_ent->active = false;
+        // printf("we are over attack duration, hiding\n");
+        
+        if(current_time > arm_attack_duration + arm_attack_cooldown){
+            // printf("cooldown is also over, cancelling reschedule\n");
+            arm_attacking = false;
+            return;
+        }
+    }
+    else{
+        // printf("calculating and updating swing\n");
+        /*
+            NOTE: we only do the math if we are visibly swinging
+            We should swing 180 degrees from the start point, but synced to the players face turn
+        */
+        float progress_through_swing = (float)((float)current_time / (float)arm_attack_duration);
+        // printf("swing progress: %f\n",progress_through_swing);
+
+        // make it expoenential for some impact
+        progress_through_swing = pow(progress_through_swing, 2);
+
+        // sync the rotation
+        float momentary_rotation = 180.0f * progress_through_swing;
+        arm_ent->renderer->rotation = player_look_angle - momentary_rotation + arm_attack_relative_start;
+    
+        // printf("player: %f\nmomentary: %f\nrelative_offset: %f\n",player_look_angle,momentary_rotation,arm_attack_relative_start);
+    }
+
+    // re register timer
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = arm_attack_cb_poll;
+    t->length_ms = arm_attack_poll_interval; // poll every 10ms
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+
+    // printf("re scheduled timer\n");
+}
+
+void begin_arm_attack_anim(){
+    // printf("was told to start anim\n");
+    if(arm_attacking){
+        // printf("already playing. not started\n");
+        return;
+    }
+    
+    arm_attacking = true;
+    arm_attack_start = SDL_GetTicks();
+    arm_ent->active = true;
+    // sync start point to where player is looking
+    arm_ent->renderer->rotation = player_look_angle + arm_attack_relative_start;
+
+    // register the polling function
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = arm_attack_cb_poll;
+    t->length_ms = arm_attack_poll_interval; // poll every 10ms
+    t->loops = 0;
+    t->start_ticks = arm_attack_start;
+    ye_register_timer(t);
 }
 
 /*
