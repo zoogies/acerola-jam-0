@@ -3,6 +3,7 @@
 #ifndef M_PI
 #define M_PI 3.14
 #endif
+#include <stdlib.h>
 
 #include <yoyoengine/yoyoengine.h>
 
@@ -100,4 +101,98 @@ void enemy_controller_shutdown(){
 
 void create_new_enemy(float x, float y){
 
+}
+
+void destroy_enemy(struct game_enemy *en){
+    printf("destroying enemy: %s\n",en->ent->name);
+    // find en in enemies and remove it
+    struct game_enemy *itr = enemies;
+    struct game_enemy *last = NULL;
+    while(itr != NULL){
+        if(itr == en){
+            // enemy was first in list
+            if(last == NULL){
+                enemies = itr->next;
+            }
+            else {
+                last->next = itr->next;
+            }
+
+            ye_destroy_entity(itr->ent);
+            free(itr);
+            break;
+        }
+        last = itr;
+        itr = itr->next;
+    }
+}
+
+/*
+    Kills any enemies within the player arm swing field
+*/
+void kill_enemies_within(float px, float py, float pa){
+    struct game_enemy *en = enemies;
+
+    while(en != NULL){
+        float ex = en->ent->transform->x + (en->ent->renderer->rect.w / 2);
+        float ey = en->ent->transform->y + (en->ent->renderer->rect.h / 2);
+
+        // printf("--------\n");
+
+        // angle between player and enemy
+        double player_to_enemy_angle = atan2( ey - py, ex - px ) * (180.0 / M_PI) + 90;
+        // printf("player to enemy angle: %f\n",player_to_enemy_angle);
+        // printf("player look angle: %f\n",pa);
+        // printf("left bound: %f, right bound: %f\n",pa - 120, pa + 120);
+
+        // printf("player:\n\tx:%f,%f\nenemy:\n\tx:%f,%f\n",px,py,ex,ey);
+        float dist = ye_distance(px,py,ex,ey);
+        // printf("distance from player to enemy: %f\n",dist);
+
+        // if the enemy is within 180 degree field of view of where player is looking
+        if(pa - 120 < player_to_enemy_angle && pa + 120 > player_to_enemy_angle){
+            // printf("enemy is within view cone\n");
+
+            if(dist > 0 && dist < 250){
+                /*
+                    Play a death animation and sound
+                */
+                struct ye_entity *anim = ye_create_entity_named("death anim");
+                ye_add_transform_component(anim, ex, ey);
+                ye_add_animation_renderer_component(anim,1,"animations/death/death.yoyo");
+                anim->renderer->rect.w *= 1.5;
+                anim->renderer->rect.h *= 1.5;
+                anim->renderer->rect.x = -(anim->renderer->rect.w / 2);
+                anim->renderer->rect.y = -(anim->renderer->rect.h / 2);
+
+                // printf("enemy is within attack range\n");
+                // TODO: kill enemy
+                struct game_enemy * tmp = en->next;
+                destroy_enemy(en);
+                en = tmp;
+
+                // play death sound
+                int r = rand() % 4;
+                printf("rolled %d\n",r);
+                switch(r){
+                    case 1:
+                        ye_play_sound("sfx/death/1.mp3",0,1.0f);
+                        break;
+                    case 2:
+                        ye_play_sound("sfx/death/2.mp3",0,1.0f);
+                        break;
+                    case 3:
+                        ye_play_sound("sfx/death/3.mp3",0,1.0f);
+                        break;
+                    default:
+                        ye_play_sound("sfx/death/4.mp3",0,1.0f);
+                        break;
+                }
+                continue;
+            }
+
+        }
+
+        en = en->next; // case for if we dont destroy an enemy
+    }
 }

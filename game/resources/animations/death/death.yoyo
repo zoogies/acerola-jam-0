@@ -1,0 +1,10 @@
+{
+    "name": "death",
+    "version": 0,
+    "src": "animations/death/death.png",
+    "frame_width": 150,
+    "frame_height": 150,
+    "frame_count": 10,
+    "frame_delay": 110,
+    "loops": 0
+}

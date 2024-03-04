@@ -98,11 +98,11 @@ void yoyo_post_frame(){
 }
 
 void yoyo_trigger_enter(struct ye_entity *e1, struct ye_entity *e2){
-    printf("%s was entered by %s\n",e2->name, e1->name);
+    // printf("%s was entered by %s\n",e2->name, e1->name);
 
     player_controller_trigger_handler(e1,e2);
 }
 
 void yoyo_collision(struct ye_entity *e1, struct ye_entity *e2){
-    printf("%s collided with %s\n",e2->name, e1->name);
+    // printf("%s collided with %s\n",e2->name, e1->name);
 }

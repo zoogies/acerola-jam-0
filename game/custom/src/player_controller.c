@@ -10,6 +10,7 @@
 #endif
 
 #include "player_controller.h"
+#include "enemy_controller.h"
 #include "ui_controller.h"
 
 bool player_moved_this_frame;
@@ -390,7 +391,18 @@ void begin_arm_attack_anim(){
         return;
     }
     
-    ye_play_sound("sfx/armswing.mp3",0,0.75f);
+    int r = rand() % 3;
+    switch(r){
+        case 1:
+            ye_play_sound("sfx/armswing.mp3",0,0.75f);
+            break;
+        case 2:
+            ye_play_sound("sfx/armswing2.mp3",0,0.75f);
+            break;
+        default:
+            ye_play_sound("sfx/armswing3.mp3",0,0.75f);
+            break;
+    }
     arm_attacking = true;
     arm_attack_start = SDL_GetTicks();
     arm_ent->active = true;
@@ -404,6 +416,9 @@ void begin_arm_attack_anim(){
     t->loops = 0;
     t->start_ticks = arm_attack_start;
     ye_register_timer(t);
+
+    // try to kill enemies within range
+    kill_enemies_within(player_ent->transform->x,player_ent->transform->y, player_look_angle);
 }
 
 /*

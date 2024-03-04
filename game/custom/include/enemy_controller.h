@@ -17,4 +17,6 @@ void enemy_controller_shutdown();
 
 void create_new_enemy(float x, float y);
 
+void kill_enemies_within(float px, float py, float pa);
+
 #endif
