@@ -268,7 +268,7 @@ void player_controller_pre_frame(){
 
     struct ye_rectf pos = ye_get_position(player_ent, YE_COMPONENT_TRANSFORM);
     // printf("%f,%f\n",pos.x,pos.y);
-    ui_controller_update_bind_ui(sd, pos.x, pos.y);
+    ui_controller_update_bind_ui(&sd, pos.x, pos.y);
 
     // make sure the arm is tracked to the player
     arm_ent->transform->x = player_ent->transform->x;

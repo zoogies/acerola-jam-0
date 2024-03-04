@@ -104,7 +104,7 @@ void create_new_enemy(float x, float y){
 }
 
 void destroy_enemy(struct game_enemy *en){
-    printf("destroying enemy: %s\n",en->ent->name);
+    // printf("destroying enemy: %s\n",en->ent->name);
     // find en in enemies and remove it
     struct game_enemy *itr = enemies;
     struct game_enemy *last = NULL;
@@ -173,7 +173,7 @@ void kill_enemies_within(float px, float py, float pa){
 
                 // play death sound
                 int r = rand() % 4;
-                printf("rolled %d\n",r);
+                // printf("rolled %d\n",r);
                 switch(r){
                     case 1:
                         ye_play_sound("sfx/death/1.mp3",0,1.0f);

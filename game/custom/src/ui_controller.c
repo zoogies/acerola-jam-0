@@ -263,6 +263,8 @@ void ui_refresh_bind_labels(struct bind_state_data sd){
     else
         attack_text->renderer->renderer_impl.text->text = strdup("?");
     ye_update_renderer_component(attack_text);
+
+    // printf("refreshed bind labels\n");
 }
 
 /*
@@ -271,11 +273,11 @@ void ui_refresh_bind_labels(struct bind_state_data sd){
     we need a seperate animation meta and source to be in the cache for each key (this could be patched in engine with a renderer tint field but i dont want
     to spend more time than I need to when I can just patch it later)
 */
-void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
+void ui_controller_update_bind_ui(struct bind_state_data * sd, float x, float y){
     /*
         Move up
     */
-    if(sd.moving_up){
+    if(sd->moving_up){
         SDL_SetTextureColorMod(up_key->renderer->texture, 255, 0, 0);
     }
     else{
@@ -285,7 +287,7 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     /*
         Move down
     */
-    if(sd.moving_down){
+    if(sd->moving_down){
         SDL_SetTextureColorMod(down_key->renderer->texture, 255, 0, 0);
     }
     else{
@@ -295,7 +297,7 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     /*
         Move left
     */
-    if(sd.moving_left){
+    if(sd->moving_left){
         SDL_SetTextureColorMod(left_key->renderer->texture, 255, 0, 0);
     }
     else{
@@ -305,7 +307,7 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     /*
         Move right
     */
-    if(sd.moving_right){
+    if(sd->moving_right){
         SDL_SetTextureColorMod(right_key->renderer->texture, 255, 0, 0);
     }
     else{
@@ -315,7 +317,7 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     /*
         Attack
     */
-    if(sd.attacking){
+    if(sd->attacking){
         SDL_SetTextureColorMod(attack_key->renderer->texture, 255, 0, 0);
     }
     else{
@@ -325,9 +327,9 @@ void ui_controller_update_bind_ui(struct bind_state_data sd, float x, float y){
     /*
         If we discoevered a bind this frame, refresh the bind labels
     */
-    if(sd.discovered_bind_this_frame){
-        ui_refresh_bind_labels(sd);
-        sd.discovered_bind_this_frame = false;
+    if(sd->discovered_bind_this_frame){
+        ui_refresh_bind_labels(*sd);
+        sd->discovered_bind_this_frame = false;
     }
 
     /*
