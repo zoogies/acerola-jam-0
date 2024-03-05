@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "player_controller.h"
 #include "ui_controller.h"
 
@@ -23,6 +25,11 @@ struct ye_entity * darken = NULL;
 struct ye_entity * monitor = NULL;
 struct ye_entity * monitor_graph = NULL;
 struct ye_entity * monitor_heartrate = NULL;
+
+// text box stuff
+struct ye_entity * text_box = NULL;
+struct ye_entity * text_content = NULL;
+struct ye_entity * text_continue_prompt = NULL;
 
 /*
     Film grain
@@ -132,6 +139,10 @@ void ui_controller_attatch(){
     monitor_graph = ye_get_entity_by_name("monitor_graph");
     monitor_heartrate = ye_get_entity_by_name("monitor_heartrate");
     SDL_SetTextureColorMod(monitor_graph->renderer->texture, 0, 255, 0); // make it bright green in engine
+
+    text_box = ye_get_entity_by_name("text_box");
+    text_content = ye_get_entity_by_name("text_content");
+    text_continue_prompt = ye_get_entity_by_name("text_continue_prompt");
 
     // setup timer for monitor
     struct ye_timer * t = malloc(sizeof(struct ye_timer));
@@ -370,6 +381,13 @@ void ui_controller_update_bind_ui(struct bind_state_data * sd, float x, float y)
     monitor_graph->transform->y = y;
     monitor_heartrate->transform->x = x;
     monitor_heartrate->transform->y = y;
+
+    text_box->transform->x = x;
+    text_box->transform->y = y;
+    text_content->transform->x = x;
+    text_content->transform->y = y;
+    text_continue_prompt->transform->x = x;
+    text_continue_prompt->transform->y = y;
 }
 
 /*
@@ -480,4 +498,142 @@ void begin_ui_transform_blood(){
     // printf("registered timer\n");
 
     SDL_SetTextureAlphaMod(bloody_vignette->renderer->texture, 0);
+}
+
+// text box state (dynamic)
+bool displaying_text = false;
+char **dialog_list = NULL;
+int number_of_dialog_lines = 0;
+bool ready_to_continue = false;
+// int last_dialog_ticks = 0;
+int char_index_into_str = 0;
+// int len_of_line = 0;
+int current_line = 0;
+void (*end_dialog_callback)();
+
+// static text box state
+char character_noises[3][25] = {"sfx/keypress/1.mp3","sfx/keypress/2.mp3","sfx/keypress/3.mp3"};
+int ms_per_character = 50;
+
+void dialog_box_poll(){
+    if(!displaying_text)
+        return;
+    
+
+    if(char_index_into_str < strlen(dialog_list[current_line])){
+        // printf("current line:\n%s\n",dialog_list[current_line]);
+        // printf("current character index: %d\n",char_index_into_str);
+
+        char substr[1024];
+        strncpy(substr,dialog_list[current_line],char_index_into_str + 1);
+        substr[char_index_into_str + 1] = '\0';
+        // printf("substr: %s\n",substr);
+
+        free(text_content->renderer->renderer_impl.text->text);
+        text_content->renderer->renderer_impl.text->text = strdup(substr);
+        ye_update_renderer_component(text_content);
+
+        char_index_into_str++;
+        int r = rand() % 3;
+        ye_play_sound(character_noises[r],0,0.75f);
+    }
+    else{
+        text_continue_prompt->active = true;
+        ready_to_continue = true;
+    }
+
+    if(current_line > number_of_dialog_lines){
+        // ----- cleanup -----
+        for(int i = 0; i < number_of_dialog_lines; i++){
+            free(dialog_list[i]);
+            dialog_list[i] = NULL;
+        }
+        free(dialog_list);
+        dialog_list = NULL;
+        return;
+    }
+
+    // reschedule timer
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = dialog_box_poll;
+    t->length_ms = ms_per_character;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
+void ui_progress_dialog(){
+    if(ready_to_continue){
+        ye_play_sound("sfx/cont.wav",0,0.3f);
+
+        current_line++;
+        char_index_into_str = 0;
+        ready_to_continue = false;
+        text_continue_prompt->active = false;
+
+        // terminate if this was last line
+        if(current_line >= number_of_dialog_lines){
+            displaying_text = false;
+            text_box->active = false;
+            text_content->active = false;
+            player_controller_active = true;
+
+            if(end_dialog_callback != NULL)
+                end_dialog_callback();
+        }
+    }
+}
+
+void begin_dialog(char **tmp_dialog, int num_lines, void(*callback)()){
+    // tmp_dialog = *tmp_dialog; // prevent decay
+    // printf("Recieved: (size %d)\n",num_lines);
+    // for(int i = 0; i < num_lines; i++){
+        // printf("%s\n",tmp_dialog[i]);
+    // }
+    
+    if(displaying_text)
+        return;
+    
+    player_controller_active = false;
+
+    text_box->active = true;
+
+    if(callback != NULL)
+        end_dialog_callback = callback;
+    else
+        end_dialog_callback = NULL;
+
+    // reset the content so its not showing last text for a few frames
+    free(text_content->renderer->renderer_impl.text->text);
+    text_content->renderer->renderer_impl.text->text = strdup(" ");
+    ye_update_renderer_component(text_content);
+
+    text_content->active = true;
+    // text_continue_prompt->active = true;
+
+    number_of_dialog_lines = num_lines;
+    ready_to_continue = false;
+    displaying_text = true;
+    char_index_into_str = 0;
+    current_line = 0;
+
+    dialog_list = malloc(num_lines * sizeof(char*)); // malloc the list holding pointers
+
+    // malloc each line itself
+    for(int i = 0; i < num_lines; i++){
+        dialog_list[i] = strdup(tmp_dialog[i]);
+    }
+
+    // printf("took in char ** of line size %d\n",num_lines);
+    // for(int i = 0; i < num_lines; i++){
+        // printf("%s\n",dialog_list[i]);
+    // }
+
+    // schedule poll timer
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = dialog_box_poll;
+    t->length_ms = ms_per_character;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
 }

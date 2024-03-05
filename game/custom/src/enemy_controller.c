@@ -26,7 +26,7 @@ void enemy_controller_init(){
         /*
             If we have an entity tagged "enemy", register it
         */
-        if(entity_has_tag(itr->entity, "enemy")){
+        if(ye_entity_has_tag(itr->entity, "enemy")){
             struct game_enemy *en = malloc(sizeof(struct game_enemy));
             en->ent = itr->entity;
             en->next = enemies;

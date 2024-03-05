@@ -4,6 +4,7 @@
         "*.yoyo": "json",
         "*.tcc": "c",
         "stop_token": "c",
-        "random": "c"
+        "random": "c",
+        "typeinfo": "c"
     }
 }

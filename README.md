@@ -46,4 +46,10 @@ ENGINE
 
 ## bugs / perf issues
 
-- make sure static colliders for walls are touching as little as possible - probably a fat optimization hit
+- NOTE: so long as a physics object isnt moving a collider into another collider, no events are fired as a result, so its ok to have wall colliders intersect each other
+
+## need to do
+
+- calculate hits from center of target and player
+- lore drops around the facility while youre looking for the exit
+- meter that puts you back to normal, you get stronger when berserking

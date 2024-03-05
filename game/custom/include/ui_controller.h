@@ -19,4 +19,8 @@ void ui_controller_additional_render();
 
 void begin_ui_transform_blood();
 
+void begin_dialog(char **tmp_dialog, int num_lines, void(*callback)());
+
+void ui_progress_dialog();
+
 #endif

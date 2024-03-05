@@ -2,6 +2,7 @@
 #ifndef PLAYER_CONTROLLER
 #define PLAYER_CONTROLLER
 
+#include <stdbool.h>
 #include <yoyoengine/yoyoengine.h>
 
 struct bind_state_data {
@@ -31,6 +32,8 @@ struct bind_state_data {
 
     bool discovered_bind_this_frame;
 };
+
+extern bool player_controller_active;
 
 void init_player_controller();
 

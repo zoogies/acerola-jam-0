@@ -1,6 +1,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <yoyoengine/yoyoengine.h>
 
@@ -12,6 +13,7 @@
 #include "player_controller.h"
 #include "enemy_controller.h"
 #include "ui_controller.h"
+#include "zone.h"
 
 bool player_moved_this_frame;
 
@@ -26,6 +28,8 @@ struct ye_entity * player_ent = NULL;
 struct ye_entity * arm_ent = NULL;
 
 struct bind_state_data sd;
+
+bool player_controller_active = false;
 
 /*
     State related to arm animation attack
@@ -94,6 +98,9 @@ void init_player_controller(){
     YE_STATE.editor.colliders_visible = true;
 
     ui_register_component("timer view", ye_timer_overlay);
+
+    char * sample[] = {"what the hell?","where am I?"};
+    begin_dialog(sample,2, NULL);
 }
 
 void shutdown_player_controller(){
@@ -117,6 +124,14 @@ void player_controller_additional_render(){
     TODO: when binds change in the future we need to reset state machine to default
 */
 void player_bind_abstraction(SDL_Event e){
+    if(!player_controller_active){
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_up = false;
+        sd.moving_down = false;
+        return;
+    }
+
     if(e.type == SDL_KEYDOWN){
         if(e.key.keysym.sym == sd.bind_left){
             sd.moving_left = true;
@@ -188,6 +203,12 @@ void player_input_handler(SDL_Event e){
         ye_get_mouse_world_position(&mx, &my);
     }
 
+    if(e.type == SDL_KEYDOWN){
+        if(e.key.keysym.sym == SDLK_SPACE){
+            ui_progress_dialog();
+        }
+    }
+
     /*
         Update player position
     */
@@ -225,22 +246,24 @@ void cancel_footstep_cooldown(){
 */
 
 void player_controller_pre_frame(){
-    /*
-        Schedule the velocity for this frame based on state machine
-    */
-    if(sd.moving_up && sd.moving_down)
-        player_ent->physics->velocity.y = 0.0f;
-    else if(sd.moving_up)
-        player_ent->physics->velocity.y = -300.0f;
-    else if(sd.moving_down)
-        player_ent->physics->velocity.y = 300.0f;
+    if(player_controller_active){
+        /*
+            Schedule the velocity for this frame based on state machine
+        */
+        if(sd.moving_up && sd.moving_down)
+            player_ent->physics->velocity.y = 0.0f;
+        else if(sd.moving_up)
+            player_ent->physics->velocity.y = -300.0f;
+        else if(sd.moving_down)
+            player_ent->physics->velocity.y = 300.0f;
 
-    if(sd.moving_left && sd.moving_right)
-        player_ent->physics->velocity.x = 0.0f;
-    else if(sd.moving_left)
-        player_ent->physics->velocity.x = -300.0f;
-    else if(sd.moving_right)
-        player_ent->physics->velocity.x = 300.0f;
+        if(sd.moving_left && sd.moving_right)
+            player_ent->physics->velocity.x = 0.0f;
+        else if(sd.moving_left)
+            player_ent->physics->velocity.x = -300.0f;
+        else if(sd.moving_right)
+            player_ent->physics->velocity.x = 300.0f;
+    }
 
     /*
         If we are moving at all, lets play a sound if we arent on cooldown
@@ -332,10 +355,51 @@ void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Ke
     ui_refresh_bind_labels(sd);
 }
 
+void post_transform_deadend_dialog(){
+    char * sample[] = {"What the fuck?!?!?","I feel like im losing control"};
+    begin_dialog(sample,2, NULL);
+}
+
+void transform_post_deadend(){
+    player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d, SDLK_e);
+
+    // schedule poll timer
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = post_transform_deadend_dialog;
+    t->length_ms = 1500;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
 void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity * e2){
     // randomize our abilities if we hit a randomizer, and remove that trigger
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
         player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d, SDLK_e);
+        ye_destroy_entity(e2);
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"chair_trigger") == 0){
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        char * sample[] = {"I feel like... I could break this","I just need to figure out how..."};
+        begin_dialog(sample,2, NULL);
+        ye_destroy_entity(e2);
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"dead end trigger") == 0){
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        char * sample[] = {"Something feels wrong...","I think... Im going to be sick...","..................."};
+        begin_dialog(sample,3,transform_post_deadend);
         ye_destroy_entity(e2);
     }
 }
@@ -384,23 +448,58 @@ void arm_attack_cb_poll(){
     // printf("re scheduled timer\n");
 }
 
+bool room_one_blocked = true;
+
 void begin_arm_attack_anim(){
     // printf("was told to start anim\n");
     if(arm_attacking){
         // printf("already playing. not started\n");
         return;
     }
+
+    // get the center of the player model to calculate from
+    int cx = player_ent->transform->x + (player_ent->renderer->rect.w / 2);
+    int cy = player_ent->transform->y + (player_ent->renderer->rect.h / 2);
+
+    //////////////////////////////////////
+
+    /*
+        This is kinda stupid CQ wise, but im just going to
+        check for the one or two relevant progression things inside this function
+    */
+
+    if(room_one_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("char_render");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 200){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.75f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_zone_one();
+            room_one_blocked = false;
+        }
+    }
+
+    //////////////////////////////////////
     
     int r = rand() % 3;
     switch(r){
         case 1:
-            ye_play_sound("sfx/armswing.mp3",0,0.75f);
+            ye_play_sound("sfx/armswing.mp3",0,0.5f);
             break;
         case 2:
-            ye_play_sound("sfx/armswing2.mp3",0,0.75f);
+            ye_play_sound("sfx/armswing2.mp3",0,0.5f);
             break;
         default:
-            ye_play_sound("sfx/armswing3.mp3",0,0.75f);
+            ye_play_sound("sfx/armswing3.mp3",0,0.5f);
             break;
     }
     arm_attacking = true;
@@ -418,7 +517,7 @@ void begin_arm_attack_anim(){
     ye_register_timer(t);
 
     // try to kill enemies within range
-    kill_enemies_within(player_ent->transform->x,player_ent->transform->y, player_look_angle);
+    kill_enemies_within(cx,cy, player_look_angle);
 }
 
 /*

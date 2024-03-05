@@ -8,6 +8,7 @@
 #include "cutscene_manager.h"
 #include "ui_controller.h"
 #include "enemy_controller.h"
+#include "zone.h"
 
 enum scenes {
     MAINMENU,
@@ -39,6 +40,7 @@ void yoyo_scene_load(char *scene_name){
         if(current_scene != LAB){
             init_player_controller();
             enemy_controller_init();
+            lock_zone_one();
         }
         current_scene = LAB;
     }
