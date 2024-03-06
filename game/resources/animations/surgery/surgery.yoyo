@@ -1,0 +1,10 @@
+{
+    "name": "surgery",
+    "version": 0,
+    "src": "animations/surgery/surgery.png",
+    "frame_width": 256,
+    "frame_height": 256,
+    "frame_count": 37,
+    "frame_delay": 120,
+    "loops": -1
+}
