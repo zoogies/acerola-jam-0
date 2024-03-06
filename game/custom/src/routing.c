@@ -9,8 +9,10 @@
 #include "ui_controller.h"
 #include "enemy_controller.h"
 #include "zone.h"
+#include "mainmenu_controller.h"
 
 enum scenes {
+    ZOOGIES_INTRO,
     MAINMENU,
     INTRO_CUTSCENE,
     LAB
@@ -23,6 +25,20 @@ enum scenes current_scene;
 */
 void yoyo_scene_load(char *scene_name){
     enum scenes last_scene = current_scene;
+
+    if(strcmp(scene_name, "intro") == 0){
+        current_scene = ZOOGIES_INTRO;
+    }
+
+    if(strcmp(scene_name, "mainmenu") == 0){
+        if(current_scene != MAINMENU){
+            init_mainmenu_controller();
+        }
+        current_scene = MAINMENU;
+    }
+    else{
+        // mainmenu has no stateful cleanup
+    }
 
     if(strcmp(scene_name, "cutscene_base") == 0){
         if(current_scene != INTRO_CUTSCENE){
@@ -90,6 +106,9 @@ void yoyo_pre_frame(){
 
 void yoyo_post_frame(){
     switch(current_scene){
+        case MAINMENU:
+            mainmenu_controller_poll();
+            break;
         case INTRO_CUTSCENE:
             cutscene_poll();
             break;
