@@ -9,6 +9,12 @@
 
 #include "yoyo_c_api.h"
 
+// copy pasted
+/*
+    Film grain
+*/
+SDL_Texture * __tex_noise[20];
+
 /*
     Since we have no save data, on game init we have predetermined state
 */
@@ -153,4 +159,31 @@ void init_mainmenu_controller() {
     volume_down_button = ye_get_entity_by_name("volume minus");
     fullscreen_button = ye_get_entity_by_name("fullscreen tick");
     volume_text = ye_get_entity_by_name("volume text");
+
+    // copy pasted from ui controller
+    // film grain
+
+    unsigned char buff[640*360*3];
+    int x, y;
+
+    for(x = 0; x < 20; x++)  // create 20 noise textures to draw over screen
+    {
+        for(y = 0; y < 640*360; y++)
+        {
+            unsigned char c = rand()%255;
+            buff[y*3] = c;    // red
+            buff[y*3+1] = c;    // green
+            buff[y*3+2] = c;    // blue
+        }
+
+        // create texture  and set its blending properties
+        __tex_noise[x] = SDL_CreateTexture(YE_STATE.runtime.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STATIC, 640, 360);
+        SDL_UpdateTexture(__tex_noise[x], 0, buff, 640*3);
+        SDL_SetTextureBlendMode(__tex_noise[x], SDL_BLENDMODE_BLEND);
+        SDL_SetTextureAlphaMod(__tex_noise[x], 10); // set strength of texture blend from 0-255
+    }
+}
+
+void mainmenu_additional_render(){
+    SDL_RenderCopy(YE_STATE.runtime.renderer, __tex_noise[rand()%20], 0, 0);
 }

@@ -89,9 +89,14 @@ void yoyo_pre_shutdown(){
 
 void yoyo_additional_render(){
     switch(current_scene){
+        case MAINMENU:
+            // ui_controller_additional_render();
+            mainmenu_additional_render();
+            break;
         case LAB:
             ui_controller_additional_render();
-            player_controller_additional_render();
+            // player_controller_additional_render();
+            break;
     }
 }
 
@@ -126,4 +131,8 @@ void yoyo_trigger_enter(struct ye_entity *e1, struct ye_entity *e2){
 
 void yoyo_collision(struct ye_entity *e1, struct ye_entity *e2){
     // printf("%s collided with %s\n",e2->name, e1->name);
+}
+
+void yoyo_pre_init(){
+    // would be used to init film grain... IF I HAD ONE!
 }

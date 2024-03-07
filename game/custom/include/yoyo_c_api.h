@@ -37,7 +37,7 @@ extern bool YG_RUNNING;
     however you could use this function to modify the settings.yoyo file to change the startup behavior of the
     engine once it is actually initialized.
 */
-// #define YOYO_PRE_INIT
+#define YOYO_PRE_INIT
 
 /*
     Runs one time after the engine is initialized but before the game loop. This could be used to cleanup memory

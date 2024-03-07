@@ -6,4 +6,6 @@ void mainmenu_controller_poll();
 
 void init_mainmenu_controller();
 
+void mainmenu_additional_render();
+
 #endif
