@@ -133,7 +133,7 @@ void mainmenu_controller_poll(){
         ye_play_sound("sfx/pencil.mp3",0,1.0f);
 
         // ye_load_scene_deferred("scenes/intro_cutscene.yoyo");
-        ye_load_scene_deferred("scenes/lab.yoyo");
+        ye_load_scene_deferred("scenes/intro_cutscene.yoyo");
     }
     if(ye_button_clicked(volume_up_button)){
         ye_play_sound("sfx/pencil.mp3",0,1.0f);

@@ -40,7 +40,7 @@ void yoyo_scene_load(char *scene_name){
         // mainmenu has no stateful cleanup
     }
 
-    if(strcmp(scene_name, "cutscene_base") == 0){
+    if(strcmp(scene_name, "intro_cutscene") == 0){
         if(current_scene != INTRO_CUTSCENE){
             init_cutscene("cutscenes/intro.json");
         }

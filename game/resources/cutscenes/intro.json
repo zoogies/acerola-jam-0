@@ -1,13 +1,35 @@
 {
     "events":[
         {
-            "bg":"images/cutscene_intro/1.png",
-            "sfx":"sfx/cutscene_intro/knock.mp3"
+            "bg":"animations/intro/trigger.yoyo"
         },
         {
-            "bg":"images/cutscene_intro/1.png",
-            "speaker":"You",
-            "text":"Who's knocking at this hour?"
+            "bg":"animations/intro/broke.yoyo",
+            "text":"I'll be honest. I'm broke."
+        },
+        {
+            "bg":"animations/intro/walk.yoyo",
+            "text":"I can barely afford my tuition every semester."
+        },
+        {
+            "bg":"animations/intro/brain.yoyo",
+            "text":"On top of that, I just got diagnosed with brain cancer."
+        },
+        {
+            "bg":"animations/intro/iv.yoyo",
+            "text":"Did you know it takes $8,000 dollars a month to treat something like that?"
+        },
+        {
+            "bg":"animations/intro/ltg.yoyo",
+            "text":"To be honest, I planned on killing myself."
+        },
+        {
+            "bg":"animations/intro/letter.yoyo",
+            "text":"But that was when I got the letter."
+        },
+        {
+            "bg":"animations/intro/signed.yoyo",
+            "text":"With nothing else to lose, I signed up for the trial."
         }
     ]
 }

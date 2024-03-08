@@ -1,0 +1,10 @@
+{
+    "name": "brain",
+    "version": 0,
+    "src": "animations/intro/brain.png",
+    "frame_width": 384,
+    "frame_height": 216,
+    "frame_count": 2,
+    "frame_delay": 200,
+    "loops": -1
+}
