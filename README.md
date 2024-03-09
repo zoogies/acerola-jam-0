@@ -53,3 +53,9 @@ ENGINE
 - calculate hits from center of target and player
 - lore drops around the facility while youre looking for the exit
 - meter that puts you back to normal, you get stronger when berserking
+
+## uhh making another section again
+
+- bug where starting dialog while walking cooks it (after timer)
+- open blue door with keycard
+- block out rest of map rooms and add lore drops and props last

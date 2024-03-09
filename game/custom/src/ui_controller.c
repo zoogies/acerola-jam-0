@@ -637,3 +637,47 @@ void begin_dialog(char **tmp_dialog, int num_lines, void(*callback)()){
     t->start_ticks = SDL_GetTicks();
     ye_register_timer(t);
 }
+
+void set_fonts_and_colors_dialog(const char *font, const char *color, int font_size){
+    free(text_content->renderer->renderer_impl.text->font_name);
+    text_content->renderer->renderer_impl.text->font_name = strdup(font);
+
+    free(text_content->renderer->renderer_impl.text->color_name);
+    text_content->renderer->renderer_impl.text->color_name = strdup(color);
+
+    text_content->renderer->renderer_impl.text->font_size = font_size;
+
+    ye_update_renderer_component(text_content);
+
+    free(text_box->renderer->renderer_impl.animation->meta_file);
+    text_box->renderer->renderer_impl.animation->meta_file = strdup("animations/textbox/textbox.yoyo");
+    ye_update_renderer_component(text_box);
+
+    free(text_continue_prompt->renderer->renderer_impl.text->color_name);
+    text_continue_prompt->renderer->renderer_impl.text->color_name = strdup("white");
+    ye_update_renderer_component(text_continue_prompt);
+
+    text_box->renderer->rect = (struct ye_rectf){-225,290,671,323};
+}
+
+void reset_fonts_and_colors_dialog(){
+    free(text_content->renderer->renderer_impl.text->font_name);
+    text_content->renderer->renderer_impl.text->font_name = strdup("satan");
+
+    free(text_content->renderer->renderer_impl.text->color_name);
+    text_content->renderer->renderer_impl.text->color_name = strdup("red");
+
+    text_content->renderer->renderer_impl.text->font_size = 57;
+
+    ye_update_renderer_component(text_content);
+
+    free(text_box->renderer->renderer_impl.animation->meta_file);
+    text_box->renderer->renderer_impl.animation->meta_file = strdup("animations/red_textbox/red_textbox.yoyo");
+    ye_update_renderer_component(text_box);
+
+    free(text_continue_prompt->renderer->renderer_impl.text->color_name);
+    text_continue_prompt->renderer->renderer_impl.text->color_name = strdup("red");
+    ye_update_renderer_component(text_continue_prompt);
+
+    text_box->renderer->rect = (struct ye_rectf){-225,290,671,323};
+}

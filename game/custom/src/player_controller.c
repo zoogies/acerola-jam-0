@@ -14,6 +14,7 @@
 #include "enemy_controller.h"
 #include "ui_controller.h"
 #include "zone.h"
+#include "helper.h"
 
 bool player_moved_this_frame;
 
@@ -264,6 +265,12 @@ void player_controller_pre_frame(){
         else if(sd.moving_right)
             player_ent->physics->velocity.x = 300.0f;
     }
+    else{
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_up = false;
+        sd.moving_down = false;
+    }
 
     /*
         If we are moving at all, lets play a sound if we arent on cooldown
@@ -335,6 +342,10 @@ void player_controller_post_frame(){
 void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Keycode new_bind_left, SDL_Keycode new_bind_right, SDL_Keycode new_bind_attack){
     // play transform sound
     ye_play_sound("sfx/transform.mp3", 0, 1.0f);
+    
+    splat_blood(player_ent->transform->x, player_ent->transform->y);
+    splat_blood(player_ent->transform->x, player_ent->transform->y);
+    
     begin_ui_transform_blood();
     
     sd.bind_up = new_bind_up;
@@ -357,6 +368,13 @@ void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Ke
 
 void post_transform_deadend_dialog(){
     char * sample[] = {"What the fuck?!?!?","I feel like im losing control"};
+    
+    sd.moving_up = false;
+    sd.moving_down = false;
+    sd.moving_left = false;
+    sd.moving_right = false;
+    sd.attacking = false;
+    
     begin_dialog(sample,2, NULL);
 }
 
@@ -377,6 +395,25 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
         player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d, SDLK_e);
         ye_destroy_entity(e2);
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"clipboard_1") == 0){
+        ye_remove_collider_component(e2);
+        char * sample[] = {"Operation Report: 6O% blood loss, patient recovering well.","Expected awakening: 22OO hours."};
+        set_fonts_and_colors_dialog("typewriter","white",30);
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,2, reset_fonts_and_colors_dialog);
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"blue_card_pickup") == 0){
+        ye_destroy_entity(e2);
+        ye_play_sound("sfx/pickup.wav",0,0.5f);
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"chair_trigger") == 0){
@@ -449,6 +486,7 @@ void arm_attack_cb_poll(){
 }
 
 bool room_one_blocked = true;
+bool blue_room_blocked = true;
 
 void begin_arm_attack_anim(){
     // printf("was told to start anim\n");
@@ -478,13 +516,39 @@ void begin_arm_attack_anim(){
             block->transform->y + (block->renderer->rect.h / 2)
         )) < 200){
             // we are close enough to break door
-            ye_play_sound("sfx/woodbreak.mp3",0,0.75f);
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
             ye_remove_collider_component(block);
             free(block->renderer->renderer_impl.image->src);
             block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
             ye_update_renderer_component(block);
-            unlock_zone_one();
+            unlock_by_tag("black_zone_1");
             room_one_blocked = false;
+        }
+    }
+
+    if(blue_room_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("blueroomdoor");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 200){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("blue_room");
+            blue_room_blocked = false;
+
+            // spawn room enemies
+            create_new_enemy(2605,-3412);
+            create_new_enemy(3204,-3311);
+            create_new_enemy(3698,-2938);
+            create_new_enemy(2922,-2822);
         }
     }
 

@@ -2,8 +2,8 @@
 #ifndef ZONE
 #define ZONE
 
-void lock_zone_one();
+void unlock_by_tag(const char *tag);
 
-void unlock_zone_one();
+void lock_by_tag(const char *tag);
 
 #endif

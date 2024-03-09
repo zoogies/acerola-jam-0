@@ -23,4 +23,8 @@ void begin_dialog(char **tmp_dialog, int num_lines, void(*callback)());
 
 void ui_progress_dialog();
 
+void set_fonts_and_colors_dialog(const char *font, const char *color, int font_size);
+
+void reset_fonts_and_colors_dialog();
+
 #endif

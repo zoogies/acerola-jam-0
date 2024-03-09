@@ -56,7 +56,8 @@ void yoyo_scene_load(char *scene_name){
         if(current_scene != LAB){
             init_player_controller();
             enemy_controller_init();
-            lock_zone_one();
+            lock_by_tag("black_zone_1");
+            lock_by_tag("blue_room");
         }
         current_scene = LAB;
     }

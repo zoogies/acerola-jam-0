@@ -100,7 +100,24 @@ void enemy_controller_shutdown(){
 }
 
 void create_new_enemy(float x, float y){
+    struct ye_entity *enemy = ye_create_entity_named("enemy");
 
+    ye_add_transform_component(enemy,x,y);
+    
+    ye_add_image_renderer_component(enemy,50,"images/player/player.png");
+    enemy->renderer->rect = (struct ye_rectf){0,0,150,150};
+
+    ye_add_static_collider_component(enemy,(struct ye_rectf){0,0,150,150});
+
+    ye_add_physics_component(enemy,0,0);
+
+    ye_add_tag(enemy, "enemy"); // also creates the tag component
+
+    // add to tracked enemies
+    struct game_enemy *en = malloc(sizeof(struct game_enemy));
+    en->ent = enemy;
+    en->next = enemies;
+    enemies = en;
 }
 
 void destroy_enemy(struct game_enemy *en){
