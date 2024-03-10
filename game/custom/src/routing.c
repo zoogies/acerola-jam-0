@@ -56,8 +56,11 @@ void yoyo_scene_load(char *scene_name){
         if(current_scene != LAB){
             init_player_controller();
             enemy_controller_init();
-            lock_by_tag("black_zone_1");
-            lock_by_tag("blue_room");
+            lock_by_tag("black_zone_1"); // after breaking surgery room barrac
+            lock_by_tag("black_zone_2"); // after swiping blue card
+            lock_by_tag("blue_room");    // getting blue card barrac
+            lock_by_tag("green_room");   // swiping into green room
+            lock_by_tag("lobby");        // breaking barrier into lobby
         }
         current_scene = LAB;
     }

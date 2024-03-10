@@ -56,6 +56,13 @@ const char step_sounds[6][50] = {
 
 bool footstep_cooldown = false;
 
+/*
+    Progression
+*/
+bool has_blue_card = false;
+bool has_green_card = false;
+bool has_keys = false;
+
 void state_ui(struct nk_context *ctx){
     // struct nk_context * ctx = YE_STATE.engine.ctx;
 
@@ -390,11 +397,94 @@ void transform_post_deadend(){
     ye_register_timer(t);
 }
 
+bool player_seen_blue_door_unopened = false;
+bool player_seen_green_door_unopened = false;
+bool player_seen_locked_front_door = false;
+
+void blue_access_only(){
+    char * sample[] = {"BLUE ACCESS REQUIRED. AUTHORIZED PERSONAL ONLY."};
+    set_fonts_and_colors_dialog("typewriter","white",30);
+    begin_dialog(sample,1, reset_fonts_and_colors_dialog);
+}
+
+void green_access_only(){
+    char * sample[] = {"Dr. Alverick's Office (nuerosurgery)"};
+    set_fonts_and_colors_dialog("typewriter","white",30);
+    begin_dialog(sample,1, reset_fonts_and_colors_dialog);
+}
+
 void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity * e2){
     // randomize our abilities if we hit a randomizer, and remove that trigger
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
         player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d, SDLK_e);
         ye_destroy_entity(e2);
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"blue door floor") == 0){
+        if(has_blue_card){
+            // sd.moving_up = false;
+            // sd.moving_down = false;
+            // sd.moving_left = false;
+            // sd.moving_right = false;
+            // sd.attacking = false;
+            ye_destroy_entity(e2);
+
+            ye_play_sound("sfx/keyswipe.wav",0,1.0f);
+            unlock_by_tag("black_zone_2");
+
+            struct ye_entity *door = ye_get_entity_by_name("METAL_DOOR_PROGRESSION_1");
+            door->renderer->rotation = -90;
+            door->renderer->rect.x = -145;
+            door->renderer->rect.y = -110;
+            door->collider->rect = (struct ye_rectf){-51,-175,95,285};
+
+            player_transform(SDLK_s, SDLK_a, SDLK_q, SDLK_z, SDLK_d);
+            create_new_enemy(186,-2232);
+        }
+        else{
+            if(!player_seen_blue_door_unopened){
+                sd.moving_up = false;
+                sd.moving_down = false;
+                sd.moving_left = false;
+                sd.moving_right = false;
+                sd.attacking = false;
+                char * sample[] = {"There is a keycard reader on the door frame.","A piece of paper attatched to the door reads"};
+                begin_dialog(sample,2, blue_access_only);
+            }
+            player_seen_blue_door_unopened = true;
+        }
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"green floor") == 0){
+        if(has_green_card){
+            // sd.moving_up = false;
+            // sd.moving_down = false;
+            // sd.moving_left = false;
+            // sd.moving_right = false;
+            // sd.attacking = false;
+            ye_destroy_entity(e2);
+
+            ye_play_sound("sfx/keyswipe.wav",0,1.0f);
+            unlock_by_tag("green_room");
+
+            struct ye_entity *door = ye_get_entity_by_name("GREEN ROOM DOOR");
+            door->renderer->rotation = -90;
+            door->renderer->rect.x = -145;
+            door->renderer->rect.y = -110;
+            door->collider->rect = (struct ye_rectf){-51,-175,95,285}; // TODO: prolly needs fixed
+        }
+        else{
+            if(!player_seen_green_door_unopened){
+                sd.moving_up = false;
+                sd.moving_down = false;
+                sd.moving_left = false;
+                sd.moving_right = false;
+                sd.attacking = false;
+                char * sample[] = {"There is a keycard reader on the door frame.","The nameplate next to the door reads"};
+                begin_dialog(sample,2, green_access_only);
+            }
+            player_seen_green_door_unopened = true;
+        }
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"clipboard_1") == 0){
@@ -414,6 +504,7 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"blue_card_pickup") == 0){
         ye_destroy_entity(e2);
         ye_play_sound("sfx/pickup.wav",0,0.5f);
+        has_blue_card = true;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"chair_trigger") == 0){
@@ -426,6 +517,24 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
         char * sample[] = {"I feel like... I could break this","I just need to figure out how..."};
         begin_dialog(sample,2, NULL);
         ye_destroy_entity(e2);
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"frontdoor trigger") == 0){
+        if(has_keys){
+            // TODO: END GAME
+        }
+        else if(!player_seen_locked_front_door){
+            sd.moving_up = false;
+            sd.moving_down = false;
+            sd.moving_left = false;
+            sd.moving_right = false;
+            sd.attacking = false;
+            
+            char * sample[] = {"This seems to be the exit!","A giant padlock hangs, chained through the handles."};
+            begin_dialog(sample,2, NULL);
+            // ye_destroy_entity(e2);
+            player_seen_locked_front_door = true;
+        }
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"dead end trigger") == 0){
@@ -487,6 +596,7 @@ void arm_attack_cb_poll(){
 
 bool room_one_blocked = true;
 bool blue_room_blocked = true;
+bool lobby_blocked = true;
 
 void begin_arm_attack_anim(){
     // printf("was told to start anim\n");
@@ -549,6 +659,32 @@ void begin_arm_attack_anim(){
             create_new_enemy(3204,-3311);
             create_new_enemy(3698,-2938);
             create_new_enemy(2922,-2822);
+        }
+    }
+
+    if(lobby_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("lobby block");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 450){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("lobby");
+            lobby_blocked = false;
+
+            // spawn room enemies
+            create_new_enemy(-1012,-2090);
+            create_new_enemy(-1036,-1797);
+            create_new_enemy(-750,-1500);
+            create_new_enemy(-1600,-1910);
         }
     }
 

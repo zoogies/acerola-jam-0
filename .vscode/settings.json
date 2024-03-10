@@ -5,6 +5,7 @@
         "*.tcc": "c",
         "stop_token": "c",
         "random": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "type_traits": "c"
     }
 }
