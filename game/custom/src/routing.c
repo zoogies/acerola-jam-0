@@ -61,6 +61,8 @@ void yoyo_scene_load(char *scene_name){
             lock_by_tag("blue_room");    // getting blue card barrac
             lock_by_tag("green_room");   // swiping into green room
             lock_by_tag("lobby");        // breaking barrier into lobby
+            lock_by_tag("green_hallway");
+            lock_by_tag("green_card_room");
         }
         current_scene = LAB;
     }

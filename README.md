@@ -2,60 +2,30 @@
 
 My entry into the acerola jam 0
 
-## TODO:
-
-- Player controller
-- keybind changer
-- trigger colliders - used for detecting where player crossed for stuff like bind changes
-- brainstorm abilities
-- Port cutscene manager from raise a vannie
-- intro cutscene
-- end cutscene
-- Main menu
-
-## BUGS
-
-ENGINE
-
-- the first scene we load doesnt get the scene load callback on load since that occurs before engine fully init, so entry has to do it itself as a dumb hack
-- should we have round colliders - how hard?
-
 ## notes
 
 - would be cool to have arm alternate its approach each time (just invert renderer and switch angle)
-
-## where im at rn
-
-- player "health" which takes damage when hit by enemies (needs cooldown for not spamming it), when health reaches low player screams and enemies that hit them die (maybe keep queue for all hits that lead up to death)
-- need registering hits from enemies to player
-  - then player "death" condition
 - probably need to seperate the vectors for up and down collectively in physics calculations
-- calculate distance from center of enemy for calc - hitbox buggy for killing
 - COULD NOT REPLICATE: bug where if you walk into two colliders at once you phase
-
-## story relevant ideas
-
-- when you break chair to get out of room you get attacked first time, then when you get to end of hall you get switched
+- you berserk to get keybinds switched which is the only time you can attack
+  - you have a metetr which brings you back to normal binds later on as your HR decreases
 
 ## ideas
 
-- view cone to obstruct behind you
-- you berserk to get keybinds switched which is the only time you can attack
-  - you have a metetr which brings you back to normal binds later on as your HR decreases
-- tutorial to teach original keybinds is first room, you break a chair blocking the way
+increasing amount of blood dripping until you get to door with key, then binds change to nothing. cant move and you realize and die
 
-## bugs / perf issues
+## big remaining tasks
 
-- NOTE: so long as a physics object isnt moving a collider into another collider, no events are fired as a result, so its ok to have wall colliders intersect each other
+enemies spawn and transform triggers
 
-## need to do
+bloody vignette is messed up
 
-- calculate hits from center of target and player
-- lore drops around the facility while youre looking for the exit
-- meter that puts you back to normal, you get stronger when berserking
+enemies hit you and deal damage
 
-## uhh making another section again
+ending condition keys on door
 
-- bug where starting dialog while walking cooks it (after timer)
-- open blue door with keycard
-- block out rest of map rooms and add lore drops and props last
+transform triggers and sensible binds
+
+lore drop clipboards all around (they exposed you as radiation on purpose)
+
+end cutscene police scene coverup ty for playing

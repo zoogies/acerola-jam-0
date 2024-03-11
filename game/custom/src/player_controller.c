@@ -100,12 +100,12 @@ void init_player_controller(){
 
     ui_refresh_bind_labels(sd);
 
-    ui_register_component("player state machine",state_ui);
+    // ui_register_component("player state machine",state_ui);
 
     // DEBUG SETTINGS
-    YE_STATE.editor.colliders_visible = true;
+    // YE_STATE.editor.colliders_visible = true;
 
-    ui_register_component("timer view", ye_timer_overlay);
+    // ui_register_component("timer view", ye_timer_overlay);
 
     char * sample[] = {"what the hell?","where am I?"};
     begin_dialog(sample,2, NULL);
@@ -468,10 +468,10 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             unlock_by_tag("green_room");
 
             struct ye_entity *door = ye_get_entity_by_name("GREEN ROOM DOOR");
-            door->renderer->rotation = -90;
-            door->renderer->rect.x = -145;
-            door->renderer->rect.y = -110;
-            door->collider->rect = (struct ye_rectf){-51,-175,95,285}; // TODO: prolly needs fixed
+            door->renderer->rotation = 90;
+            door->transform->x = 2049;
+            door->transform->x = -2285;
+            ye_remove_collider_component(door);
         }
         else{
             if(!player_seen_green_door_unopened){
@@ -505,6 +505,18 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
         ye_destroy_entity(e2);
         ye_play_sound("sfx/pickup.wav",0,0.5f);
         has_blue_card = true;
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"green_card_pickup") == 0){
+        ye_destroy_entity(e2);
+        ye_play_sound("sfx/pickup.wav",0,0.5f);
+        has_green_card = true;
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"key_card_pickup") == 0){
+        ye_destroy_entity(e2);
+        ye_play_sound("sfx/pickup.wav",0,0.5f);
+        has_keys = true;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"chair_trigger") == 0){
@@ -597,6 +609,8 @@ void arm_attack_cb_poll(){
 bool room_one_blocked = true;
 bool blue_room_blocked = true;
 bool lobby_blocked = true;
+bool green_card_hallway_blocked = true;
+bool green_card_room_blocked = true;
 
 void begin_arm_attack_anim(){
     // printf("was told to start anim\n");
@@ -685,6 +699,58 @@ void begin_arm_attack_anim(){
             create_new_enemy(-1036,-1797);
             create_new_enemy(-750,-1500);
             create_new_enemy(-1600,-1910);
+        }
+    }
+
+    if(green_card_hallway_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("greencard hall door");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 250){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("green_hallway");
+            green_card_hallway_blocked = false;
+
+            // spawn room enemies
+            // create_new_enemy(-1012,-2090);
+            // create_new_enemy(-1036,-1797);
+            // create_new_enemy(-750,-1500);
+            // create_new_enemy(-1600,-1910);
+        }
+    }
+
+    if(green_card_room_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("greencard hall door copy");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 250){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("green_card_room");
+            green_card_room_blocked = false;
+
+            // spawn room enemies
+            // create_new_enemy(-1012,-2090);
+            // create_new_enemy(-1036,-1797);
+            // create_new_enemy(-750,-1500);
+            // create_new_enemy(-1600,-1910);
         }
     }
 
