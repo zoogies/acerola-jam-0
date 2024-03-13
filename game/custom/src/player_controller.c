@@ -63,6 +63,19 @@ bool has_blue_card = false;
 bool has_green_card = false;
 bool has_keys = false;
 
+int blood_spew_interval = 5250;
+
+void spew_blood(){
+    splat_blood(player_ent->transform->x,player_ent->transform->y);
+
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = spew_blood;
+    t->length_ms = blood_spew_interval;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
 void state_ui(struct nk_context *ctx){
     // struct nk_context * ctx = YE_STATE.engine.ctx;
 
@@ -109,6 +122,8 @@ void init_player_controller(){
 
     char * sample[] = {"what the hell?","where am I?"};
     begin_dialog(sample,2, NULL);
+
+    spew_blood();
 }
 
 void shutdown_player_controller(){
@@ -125,6 +140,232 @@ void player_controller_additional_render(){
     // SDL_SetRenderDrawColor(YE_STATE.runtime.renderer, 255, 0, 0, 255);
     // SDL_RenderDrawLine(YE_STATE.runtime.renderer, px - (cpos.x/2),py - (cpos.y/2), mx, my);
     // SDL_SetRenderDrawBlendMode(YE_STATE.runtime.renderer, SDL_BLENDMODE_NONE);
+}
+
+bool room_one_blocked = true;
+bool blue_room_blocked = true;
+bool lobby_blocked = true;
+bool green_card_hallway_blocked = true;
+bool green_card_room_blocked = true;
+
+void arm_attack_cb_poll(){
+    int current_time = SDL_GetTicks() - arm_attack_start;
+
+    // check if animation should be over
+    if(current_time > arm_attack_duration){
+        arm_ent->active = false;
+        // printf("we are over attack duration, hiding\n");
+        
+        if(current_time > arm_attack_duration + arm_attack_cooldown){
+            // printf("cooldown is also over, cancelling reschedule\n");
+            arm_attacking = false;
+            return;
+        }
+    }
+    else{
+        // printf("calculating and updating swing\n");
+        /*
+            NOTE: we only do the math if we are visibly swinging
+            We should swing 180 degrees from the start point, but synced to the players face turn
+        */
+        float progress_through_swing = (float)((float)current_time / (float)arm_attack_duration);
+        // printf("swing progress: %f\n",progress_through_swing);
+
+        // make it expoenential for some impact
+        progress_through_swing = pow(progress_through_swing, 2);
+
+        // sync the rotation
+        float momentary_rotation = 180.0f * progress_through_swing;
+        arm_ent->renderer->rotation = player_look_angle - momentary_rotation + arm_attack_relative_start;
+    
+        // printf("player: %f\nmomentary: %f\nrelative_offset: %f\n",player_look_angle,momentary_rotation,arm_attack_relative_start);
+    }
+
+    // re register timer
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = arm_attack_cb_poll;
+    t->length_ms = arm_attack_poll_interval; // poll every 10ms
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+
+    // printf("re scheduled timer\n");
+}
+
+void begin_arm_attack_anim(){
+    // printf("was told to start anim\n");
+    if(arm_attacking){
+        // printf("already playing. not started\n");
+        return;
+    }
+
+    // get the center of the player model to calculate from
+    int cx = player_ent->transform->x + (player_ent->renderer->rect.w / 2);
+    int cy = player_ent->transform->y + (player_ent->renderer->rect.h / 2);
+
+    //////////////////////////////////////
+
+    /*
+        This is kinda stupid CQ wise, but im just going to
+        check for the one or two relevant progression things inside this function
+    */
+
+    if(room_one_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("char_render");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 200){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("black_zone_1");
+            room_one_blocked = false;
+        }
+    }
+
+    if(blue_room_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("blueroomdoor");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 200){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("blue_room");
+            blue_room_blocked = false;
+
+            // spawn room enemies
+            create_new_enemy(2605,-3412);
+            create_new_enemy(3204,-3311);
+            create_new_enemy(3698,-2938);
+            create_new_enemy(2922,-2822);
+        }
+    }
+
+    if(lobby_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("lobby block");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 450){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("lobby");
+            lobby_blocked = false;
+
+            // spawn room enemies
+            create_new_enemy(-1012,-2090);
+            create_new_enemy(-1036,-1797);
+            create_new_enemy(-750,-1500);
+            create_new_enemy(-1600,-1910);
+        }
+    }
+
+    if(green_card_hallway_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("greencard hall door");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 250){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("green_hallway");
+            green_card_hallway_blocked = false;
+
+            // spawn room enemies
+            create_new_enemy(-930,-4440);
+            // create_new_enemy(-1036,-1797);
+            // create_new_enemy(-750,-1500);
+            // create_new_enemy(-1600,-1910);
+        }
+    }
+
+    if(green_card_room_blocked){
+        // break intro room blockage
+        struct ye_entity *block = ye_get_entity_by_name("greencard hall door copy");
+        if(abs(ye_distance(
+            cx,
+            cy,
+            block->transform->x + (block->renderer->rect.w / 2),
+            block->transform->y + (block->renderer->rect.h / 2)
+        )) < 250){
+            // we are close enough to break door
+            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
+            ye_remove_collider_component(block);
+            free(block->renderer->renderer_impl.image->src);
+            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
+            ye_update_renderer_component(block);
+            unlock_by_tag("green_card_room");
+            green_card_room_blocked = false;
+
+            // spawn room enemies
+            create_new_enemy(-2647,-5140);
+            create_new_enemy(-2052,-5181);
+            create_new_enemy(-2647,-4479);
+            create_new_enemy(-2052,-4579);
+            // create_new_enemy(-750,-1500);
+            // create_new_enemy(-1600,-1910);
+        }
+    }
+
+    //////////////////////////////////////
+    
+    int r = rand() % 3;
+    switch(r){
+        case 1:
+            ye_play_sound("sfx/armswing.mp3",0,0.5f);
+            break;
+        case 2:
+            ye_play_sound("sfx/armswing2.mp3",0,0.5f);
+            break;
+        default:
+            ye_play_sound("sfx/armswing3.mp3",0,0.5f);
+            break;
+    }
+    arm_attacking = true;
+    arm_attack_start = SDL_GetTicks();
+    arm_ent->active = true;
+    // sync start point to where player is looking
+    arm_ent->renderer->rotation = player_look_angle + arm_attack_relative_start;
+
+    // register the polling function
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = arm_attack_cb_poll;
+    t->length_ms = arm_attack_poll_interval; // poll every 10ms
+    t->loops = 0;
+    t->start_ticks = arm_attack_start;
+    ye_register_timer(t);
+
+    // try to kill enemies within range
+    kill_enemies_within(cx,cy, player_look_angle);
 }
 
 /*
@@ -228,10 +469,12 @@ void player_input_handler(SDL_Event e){
     /*
         Change rotation to look at mouse
     */
-    int dx = mx - px;
-    int dy = my - py;
-    double angle = atan2(dy,dx) * (180.0 / M_PI) + 90;
-    player_look_angle = (float)angle;
+    if(e.type == SDL_MOUSEMOTION){
+        int dx = mx - px;
+        int dy = my - py;
+        double angle = atan2(dy,dx) * (180.0 / M_PI) + 90;
+        player_look_angle = (float)angle;
+    }
     // player_ent->renderer->rotation = (float)angle;
 
     /*
@@ -348,6 +591,8 @@ void player_controller_post_frame(){
 
 void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Keycode new_bind_left, SDL_Keycode new_bind_right, SDL_Keycode new_bind_attack){
     // play transform sound
+    blood_spew_interval -= 1000;
+    
     ye_play_sound("sfx/transform.mp3", 0, 1.0f);
     
     splat_blood(player_ent->transform->x, player_ent->transform->y);
@@ -374,7 +619,7 @@ void player_transform(SDL_Keycode new_bind_up, SDL_Keycode new_bind_down, SDL_Ke
 }
 
 void post_transform_deadend_dialog(){
-    char * sample[] = {"What the fuck?!?!?","I feel like im losing control"};
+    char * sample[] = {"What the fuck?!?!?","I feel like im losing control of my body"};
     
     sd.moving_up = false;
     sd.moving_down = false;
@@ -413,11 +658,61 @@ void green_access_only(){
     begin_dialog(sample,1, reset_fonts_and_colors_dialog);
 }
 
+/*
+    NOTE: this function is invoked mid timer traversal, so unregistering timers is weird here
+*/
+void final_cut_to_unload(){
+    // ye_unregister_all_timers();
+    ye_load_scene_deferred("scenes/thanks.yoyo");
+}
+
+void final_dialog_2(){
+    char * sample[] = {"I... 309485 cant... 2349 move... 093209","320977659456"};
+    begin_dialog(sample,2, NULL);
+
+    // spawn zombies here and then add timer to go to end screen
+
+    create_new_enemy(-88,-1936);
+    create_new_enemy(289,-1576);
+
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = final_cut_to_unload;
+    t->length_ms = 8000;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
+void final_dialog(){
+    char * sample[] = {"No...","How is this possible?"};
+    begin_dialog(sample,2, NULL);
+
+    struct ye_timer * t = malloc(sizeof(struct ye_timer));
+    t->callback = final_dialog_2;
+    t->length_ms = 4000;
+    t->loops = 0;
+    t->start_ticks = SDL_GetTicks();
+    ye_register_timer(t);
+}
+
 void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity * e2){
+    // printf("collision %s %s\n",e1->name,e2->name);
+
+    // hack, ignore collisions that dont involve player
+    if(strcmp(e1->name,"enemy") == 0){
+        return;
+    }
+
+    if (e1 == NULL || e2 == NULL, e1->name == NULL || e2->name == NULL){
+        return;
+    }
+
     // randomize our abilities if we hit a randomizer, and remove that trigger
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"RANDOM_BIND_TRIGGER") == 0){
         player_transform(SDLK_s, SDLK_w, SDLK_a, SDLK_d, SDLK_e);
         ye_destroy_entity(e2);
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"blue door floor") == 0){
@@ -438,7 +733,7 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             door->renderer->rect.y = -110;
             door->collider->rect = (struct ye_rectf){-51,-175,95,285};
 
-            player_transform(SDLK_s, SDLK_a, SDLK_q, SDLK_z, SDLK_d);
+            player_transform(SDLK_s, SDLK_w, SDLK_q, SDLK_e, SDLK_d);
             create_new_enemy(186,-2232);
         }
         else{
@@ -453,6 +748,8 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             }
             player_seen_blue_door_unopened = true;
         }
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"green floor") == 0){
@@ -462,7 +759,7 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             // sd.moving_left = false;
             // sd.moving_right = false;
             // sd.attacking = false;
-            ye_destroy_entity(e2);
+            ye_remove_collider_component(e2);
 
             ye_play_sound("sfx/keyswipe.wav",0,1.0f);
             unlock_by_tag("green_room");
@@ -472,6 +769,8 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             door->transform->x = 2049;
             door->transform->x = -2285;
             ye_remove_collider_component(door);
+
+            create_new_enemy(1423,-1838);
         }
         else{
             if(!player_seen_green_door_unopened){
@@ -485,11 +784,13 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             }
             player_seen_green_door_unopened = true;
         }
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"clipboard_1") == 0){
         ye_remove_collider_component(e2);
-        char * sample[] = {"Operation Report: 6O% blood loss, patient recovering well.","Expected awakening: 22OO hours."};
+        char * sample[] = {"Operation Report: 6O% blood loss, patient recovering well.","Expected awakening: 22OO hours.","Please, let him be the one."};
         set_fonts_and_colors_dialog("typewriter","white",30);
         
         sd.moving_up = false;
@@ -498,25 +799,132 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
         sd.moving_right = false;
         sd.attacking = false;
         
-        begin_dialog(sample,2, reset_fonts_and_colors_dialog);
+        begin_dialog(sample,3, reset_fonts_and_colors_dialog);
+
+        return;
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"clipboard_2") == 0){
+        ye_remove_collider_component(e2);
+        char * sample[] = {"THERIAC REPORT: June 23rd, 2OO6","Out of 34 test trials, the variant has not emerged sucessfully once.","It's becoming a nightmare to cover up these pathetic excuses for test subjects.","If we keep this up, we'll have to hop countries again."};
+        set_fonts_and_colors_dialog("typewriter","white",30);
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,4, reset_fonts_and_colors_dialog);
+
+        return;
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"clipboard_2.5") == 0){
+        ye_remove_collider_component(e2);
+        char * sample[] = {"THERIAC REPORT: August 3rd, 2OO6","During an outpatient examination, I've indentified another vessel with the capacity.","I'll be taking the liberty to \"arrange\" him an intracranial tumor."};
+        set_fonts_and_colors_dialog("typewriter","white",30);
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,3, reset_fonts_and_colors_dialog);
+
+        return;
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"clipboard_3") == 0){
+        ye_remove_collider_component(e2);
+        char * sample[] = {"THERIAC REPORT: December 23rd, 2OO6","I'm reaching the end of my years, and I doubt my ability to finish this mission.","I've decided, that this subject will be my last.","If the seed doesnt take root, god help us all."};
+        set_fonts_and_colors_dialog("typewriter","white",30);
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,4, reset_fonts_and_colors_dialog);
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"blue_card_pickup") == 0){
         ye_destroy_entity(e2);
         ye_play_sound("sfx/pickup.wav",0,0.5f);
         has_blue_card = true;
+
+        char * sample[] = {"I should be able to open the secure door with this."};
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,1, NULL);
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"green_card_pickup") == 0){
         ye_destroy_entity(e2);
         ye_play_sound("sfx/pickup.wav",0,0.5f);
         has_green_card = true;
+
+        char * sample[] = {"This looks like Dr. Alvericks badge.","I bet I can get into his office with this"};
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,2, NULL);
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"key_card_pickup") == 0){
         ye_destroy_entity(e2);
         ye_play_sound("sfx/pickup.wav",0,0.5f);
         has_keys = true;
+
+        player_transform(SDLK_d, SDLK_c, SDLK_x, SDLK_v, SDLK_a);
+
+        char * sample[] = {"I can barely walk...","I just need to make it to the front door"};
+        
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        begin_dialog(sample,2, NULL);
+
+        struct ye_entity *last = ye_get_entity_by_name("exit_door_trigger");
+        last->active = true;
+
+        return;
+    }
+
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"exit_door_trigger") == 0){
+        ye_destroy_entity(e2);
+        
+        player_transform(0, 0, 0, 0, 0);
+
+        // schedule dialog
+        struct ye_timer * t = malloc(sizeof(struct ye_timer));
+        t->callback = final_dialog;
+        t->length_ms = 2000;
+        t->loops = 0;
+        t->start_ticks = SDL_GetTicks();
+        ye_register_timer(t);
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"chair_trigger") == 0){
@@ -529,6 +937,8 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
         char * sample[] = {"I feel like... I could break this","I just need to figure out how..."};
         begin_dialog(sample,2, NULL);
         ye_destroy_entity(e2);
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"frontdoor trigger") == 0){
@@ -547,6 +957,8 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
             // ye_destroy_entity(e2);
             player_seen_locked_front_door = true;
         }
+
+        return;
     }
 
     if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"dead end trigger") == 0){
@@ -556,234 +968,28 @@ void player_controller_trigger_handler(struct ye_entity * e1, struct ye_entity *
         sd.moving_right = false;
         sd.attacking = false;
         
-        char * sample[] = {"Something feels wrong...","I think... Im going to be sick...","..................."};
-        begin_dialog(sample,3,transform_post_deadend);
+        char * sample[] = {"Something feels wrong...","I think... Im going to be sick..."};
+        begin_dialog(sample,2,transform_post_deadend);
         ye_destroy_entity(e2);
-    }
-}
 
-void arm_attack_cb_poll(){
-    int current_time = SDL_GetTicks() - arm_attack_start;
-
-    // check if animation should be over
-    if(current_time > arm_attack_duration){
-        arm_ent->active = false;
-        // printf("we are over attack duration, hiding\n");
-        
-        if(current_time > arm_attack_duration + arm_attack_cooldown){
-            // printf("cooldown is also over, cancelling reschedule\n");
-            arm_attacking = false;
-            return;
-        }
-    }
-    else{
-        // printf("calculating and updating swing\n");
-        /*
-            NOTE: we only do the math if we are visibly swinging
-            We should swing 180 degrees from the start point, but synced to the players face turn
-        */
-        float progress_through_swing = (float)((float)current_time / (float)arm_attack_duration);
-        // printf("swing progress: %f\n",progress_through_swing);
-
-        // make it expoenential for some impact
-        progress_through_swing = pow(progress_through_swing, 2);
-
-        // sync the rotation
-        float momentary_rotation = 180.0f * progress_through_swing;
-        arm_ent->renderer->rotation = player_look_angle - momentary_rotation + arm_attack_relative_start;
-    
-        // printf("player: %f\nmomentary: %f\nrelative_offset: %f\n",player_look_angle,momentary_rotation,arm_attack_relative_start);
-    }
-
-    // re register timer
-    struct ye_timer * t = malloc(sizeof(struct ye_timer));
-    t->callback = arm_attack_cb_poll;
-    t->length_ms = arm_attack_poll_interval; // poll every 10ms
-    t->loops = 0;
-    t->start_ticks = SDL_GetTicks();
-    ye_register_timer(t);
-
-    // printf("re scheduled timer\n");
-}
-
-bool room_one_blocked = true;
-bool blue_room_blocked = true;
-bool lobby_blocked = true;
-bool green_card_hallway_blocked = true;
-bool green_card_room_blocked = true;
-
-void begin_arm_attack_anim(){
-    // printf("was told to start anim\n");
-    if(arm_attacking){
-        // printf("already playing. not started\n");
         return;
     }
 
-    // get the center of the player model to calculate from
-    int cx = player_ent->transform->x + (player_ent->renderer->rect.w / 2);
-    int cy = player_ent->transform->y + (player_ent->renderer->rect.h / 2);
+    if(strcmp(e1->name,"PLAYER") == 0 && strcmp(e2->name,"before_green_room_trigger") == 0){
+        sd.moving_up = false;
+        sd.moving_down = false;
+        sd.moving_left = false;
+        sd.moving_right = false;
+        sd.attacking = false;
+        
+        player_transform(SDLK_e,SDLK_d,SDLK_f,SDLK_s,SDLK_z);
 
-    //////////////////////////////////////
+        char * sample[] = {"Fuck...","I cant think straight...","god, its fucking agonizing"};
+        begin_dialog(sample,3,NULL);
+        ye_destroy_entity(e2);
 
-    /*
-        This is kinda stupid CQ wise, but im just going to
-        check for the one or two relevant progression things inside this function
-    */
-
-    if(room_one_blocked){
-        // break intro room blockage
-        struct ye_entity *block = ye_get_entity_by_name("char_render");
-        if(abs(ye_distance(
-            cx,
-            cy,
-            block->transform->x + (block->renderer->rect.w / 2),
-            block->transform->y + (block->renderer->rect.h / 2)
-        )) < 200){
-            // we are close enough to break door
-            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
-            ye_remove_collider_component(block);
-            free(block->renderer->renderer_impl.image->src);
-            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
-            ye_update_renderer_component(block);
-            unlock_by_tag("black_zone_1");
-            room_one_blocked = false;
-        }
+        return;
     }
-
-    if(blue_room_blocked){
-        // break intro room blockage
-        struct ye_entity *block = ye_get_entity_by_name("blueroomdoor");
-        if(abs(ye_distance(
-            cx,
-            cy,
-            block->transform->x + (block->renderer->rect.w / 2),
-            block->transform->y + (block->renderer->rect.h / 2)
-        )) < 200){
-            // we are close enough to break door
-            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
-            ye_remove_collider_component(block);
-            free(block->renderer->renderer_impl.image->src);
-            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
-            ye_update_renderer_component(block);
-            unlock_by_tag("blue_room");
-            blue_room_blocked = false;
-
-            // spawn room enemies
-            create_new_enemy(2605,-3412);
-            create_new_enemy(3204,-3311);
-            create_new_enemy(3698,-2938);
-            create_new_enemy(2922,-2822);
-        }
-    }
-
-    if(lobby_blocked){
-        // break intro room blockage
-        struct ye_entity *block = ye_get_entity_by_name("lobby block");
-        if(abs(ye_distance(
-            cx,
-            cy,
-            block->transform->x + (block->renderer->rect.w / 2),
-            block->transform->y + (block->renderer->rect.h / 2)
-        )) < 450){
-            // we are close enough to break door
-            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
-            ye_remove_collider_component(block);
-            free(block->renderer->renderer_impl.image->src);
-            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
-            ye_update_renderer_component(block);
-            unlock_by_tag("lobby");
-            lobby_blocked = false;
-
-            // spawn room enemies
-            create_new_enemy(-1012,-2090);
-            create_new_enemy(-1036,-1797);
-            create_new_enemy(-750,-1500);
-            create_new_enemy(-1600,-1910);
-        }
-    }
-
-    if(green_card_hallway_blocked){
-        // break intro room blockage
-        struct ye_entity *block = ye_get_entity_by_name("greencard hall door");
-        if(abs(ye_distance(
-            cx,
-            cy,
-            block->transform->x + (block->renderer->rect.w / 2),
-            block->transform->y + (block->renderer->rect.h / 2)
-        )) < 250){
-            // we are close enough to break door
-            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
-            ye_remove_collider_component(block);
-            free(block->renderer->renderer_impl.image->src);
-            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
-            ye_update_renderer_component(block);
-            unlock_by_tag("green_hallway");
-            green_card_hallway_blocked = false;
-
-            // spawn room enemies
-            // create_new_enemy(-1012,-2090);
-            // create_new_enemy(-1036,-1797);
-            // create_new_enemy(-750,-1500);
-            // create_new_enemy(-1600,-1910);
-        }
-    }
-
-    if(green_card_room_blocked){
-        // break intro room blockage
-        struct ye_entity *block = ye_get_entity_by_name("greencard hall door copy");
-        if(abs(ye_distance(
-            cx,
-            cy,
-            block->transform->x + (block->renderer->rect.w / 2),
-            block->transform->y + (block->renderer->rect.h / 2)
-        )) < 250){
-            // we are close enough to break door
-            ye_play_sound("sfx/woodbreak.mp3",0,0.3f);
-            ye_remove_collider_component(block);
-            free(block->renderer->renderer_impl.image->src);
-            block->renderer->renderer_impl.image->src = strdup("images/env/brokenboard.png");
-            ye_update_renderer_component(block);
-            unlock_by_tag("green_card_room");
-            green_card_room_blocked = false;
-
-            // spawn room enemies
-            // create_new_enemy(-1012,-2090);
-            // create_new_enemy(-1036,-1797);
-            // create_new_enemy(-750,-1500);
-            // create_new_enemy(-1600,-1910);
-        }
-    }
-
-    //////////////////////////////////////
-    
-    int r = rand() % 3;
-    switch(r){
-        case 1:
-            ye_play_sound("sfx/armswing.mp3",0,0.5f);
-            break;
-        case 2:
-            ye_play_sound("sfx/armswing2.mp3",0,0.5f);
-            break;
-        default:
-            ye_play_sound("sfx/armswing3.mp3",0,0.5f);
-            break;
-    }
-    arm_attacking = true;
-    arm_attack_start = SDL_GetTicks();
-    arm_ent->active = true;
-    // sync start point to where player is looking
-    arm_ent->renderer->rotation = player_look_angle + arm_attack_relative_start;
-
-    // register the polling function
-    struct ye_timer * t = malloc(sizeof(struct ye_timer));
-    t->callback = arm_attack_cb_poll;
-    t->length_ms = arm_attack_poll_interval; // poll every 10ms
-    t->loops = 0;
-    t->start_ticks = arm_attack_start;
-    ye_register_timer(t);
-
-    // try to kill enemies within range
-    kill_enemies_within(cx,cy, player_look_angle);
 }
 
 /*

@@ -44,6 +44,36 @@ int hr_interval = 1250;
 int hr_poll_interval = 50;
 int last_hr_tick = 0;
 
+void _randomize_heartrate_text(){
+    free(monitor_heartrate->renderer->renderer_impl.text->text);
+    char n[3];
+    int offset = (rand() % 10) - 5;
+    sprintf(n, "%d", heartrate + offset); 
+    monitor_heartrate->renderer->renderer_impl.text->text = strdup(n);
+    ye_update_renderer_component(monitor_heartrate);
+}
+
+void randomize_heartrate_text(){
+    _randomize_heartrate_text();
+
+    // re schedule to run
+    struct ye_timer * t2 = malloc(sizeof(struct ye_timer));
+    t2->callback = randomize_heartrate_text;
+    
+    if(heartrate > 180){
+        t2->length_ms = (rand() % 300) + 300;
+    }
+    else if(heartrate > 100){
+        t2->length_ms = (rand() % 600) + 600;
+    }
+    else{
+        t2->length_ms = (rand() % 600) + 1000;
+    }
+    t2->loops = 0;
+    t2->start_ticks = SDL_GetTicks();
+    ye_register_timer(t2);
+}
+
 void set_heartrate(int hr){
     heartrate = hr;
 
@@ -88,36 +118,6 @@ void heartrate_monitor_poll(){
     ye_register_timer(t);
 }
 
-void _randomize_heartrate_text(){
-    free(monitor_heartrate->renderer->renderer_impl.text->text);
-    char n[3];
-    int offset = (rand() % 10) - 5;
-    sprintf(n, "%d", heartrate + offset); 
-    monitor_heartrate->renderer->renderer_impl.text->text = strdup(n);
-    ye_update_renderer_component(monitor_heartrate);
-}
-
-void randomize_heartrate_text(){
-    _randomize_heartrate_text();
-
-    // re schedule to run
-    struct ye_timer * t2 = malloc(sizeof(struct ye_timer));
-    t2->callback = randomize_heartrate_text;
-    
-    if(heartrate > 180){
-        t2->length_ms = (rand() % 300) + 300;
-    }
-    else if(heartrate > 100){
-        t2->length_ms = (rand() % 600) + 600;
-    }
-    else{
-        t2->length_ms = (rand() % 600) + 1000;
-    }
-    t2->loops = 0;
-    t2->start_ticks = SDL_GetTicks();
-    ye_register_timer(t2);
-}
-
 void ui_controller_attatch(){
     up_key = ye_get_entity_by_name("w_key");
     down_key = ye_get_entity_by_name("s_key");
@@ -155,7 +155,8 @@ void ui_controller_attatch(){
     // other monitor timer that makes heartrate vary a little bit
     randomize_heartrate_text();
 
-    // film grain
+    // film grain (it stack overflows on web)
+    #ifndef __EMSCRIPTEN__
 
     unsigned char buff[640*360*3];
     int x, y;
@@ -176,6 +177,8 @@ void ui_controller_attatch(){
         SDL_SetTextureBlendMode(tex_noise[x], SDL_BLENDMODE_BLEND);
         SDL_SetTextureAlphaMod(tex_noise[x], 20); // set strength of texture blend from 0-255
     }
+
+    #endif
 }
 
 /*
@@ -395,7 +398,9 @@ void ui_controller_update_bind_ui(struct bind_state_data * sd, float x, float y)
 */
 void ui_controller_additional_render(){
     // film grain
+    #ifndef __EMSCRIPTEN__
     SDL_RenderCopy(YE_STATE.runtime.renderer, tex_noise[rand()%20], 0, 0);
+    #endif
 }
 
 bool transforming_ui = false;
@@ -414,7 +419,7 @@ void ui_transform_routine(){
     if(current_time > transform_end){
         transforming_ui = false;
         bloody_vignette->active = false;
-        set_heartrate(80);
+        set_heartrate(heartrate);
         return;
     }
 
@@ -481,7 +486,8 @@ void begin_ui_transform_blood(){
     if(transforming_ui)
         return;
     
-    set_heartrate(200);
+    heartrate+=30;
+    set_heartrate(heartrate);
     transforming_ui = true;
     bloody_vignette->active = true;
     bloody_vignette->renderer->alpha = 0; // set here because it wont update until first timer run (longer than one frame)

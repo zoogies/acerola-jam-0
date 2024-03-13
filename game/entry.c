@@ -24,6 +24,10 @@
     you can do so with YOYO_PRE_INIT and write directly to settings.yoyo
 */
 
+// #define NK_INCLUDE_FIXED_TYPES // fix windows compilation bug
+
+#define NK_INCLUDE_FIXED_TYPES
+
 #include <yoyoengine/yoyoengine.h>
 #include "yoyo_c_api.h"
 

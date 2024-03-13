@@ -160,8 +160,10 @@ void init_mainmenu_controller() {
     fullscreen_button = ye_get_entity_by_name("fullscreen tick");
     volume_text = ye_get_entity_by_name("volume text");
 
-    // copy pasted from ui controller
-    // film grain
+    /*
+        Film grain effect that stack overflows on web
+    */
+    #ifndef __EMSCRIPTEN__
 
     unsigned char buff[640*360*3];
     int x, y;
@@ -182,8 +184,12 @@ void init_mainmenu_controller() {
         SDL_SetTextureBlendMode(__tex_noise[x], SDL_BLENDMODE_BLEND);
         SDL_SetTextureAlphaMod(__tex_noise[x], 10); // set strength of texture blend from 0-255
     }
+
+    #endif
 }
 
 void mainmenu_additional_render(){
+    #ifndef __EMSCRIPTEN__
     SDL_RenderCopy(YE_STATE.runtime.renderer, __tex_noise[rand()%20], 0, 0);
+    #endif
 }

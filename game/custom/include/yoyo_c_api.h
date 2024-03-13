@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// #define NK_INCLUDE_FIXED_TYPES // fix windows compilation bug
+
 #include <yoyoengine/yoyoengine.h>
 
 // controls whether the game is running. Set this to false at any point and everything will quit.

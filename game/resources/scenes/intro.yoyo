@@ -1,1 +1,98 @@
-{"name":"intro","version":0,"styles":["styles.yoyo"],"prefabs":[],"scene":{"default camera":"scene camera","entities":[{"name":"newlogo","active":true,"components":{"renderer":{"active":true,"type":3,"flipped_x":false,"flipped_y":false,"z":1,"alignment":4,"preserve size":false,"position":{"x":0,"y":185,"w":1920,"h":365},"rotation":0.0,"impl":{"animation path":"intro/textlogo.yoyo"}}}},{"name":"kitty","active":true,"components":{"renderer":{"active":true,"type":3,"flipped_x":false,"flipped_y":false,"z":1,"alignment":4,"preserve size":false,"position":{"x":695,"y":530,"w":512,"h":512},"rotation":0.0,"impl":{"animation path":"intro/kitty/kitty.yoyo"}}}},{"name":"controller","active":true,"components":{"script":{"active":true,"handle":"intro/intro.lua"}}},{"name":"scene camera","active":true,"components":{"transform":{"x":0,"y":0},"camera":{"active":true,"z":9999,"view field":{"x":0,"y":0,"w":1920,"h":1080}}}}],"music":{"src":"intro/synth.mp3","loop":false,"volume":1.0}}}
+{
+    "name": "intro",
+    "version": 0,
+    "styles": [
+        "styles.yoyo"
+    ],
+    "prefabs": [],
+    "scene": {
+        "default camera": "scene camera",
+        "entities": [
+            {
+                "name": "newlogo",
+                "active": true,
+                "components": {
+                    "renderer": {
+                        "active": true,
+                        "type": 3,
+                        "flipped_x": false,
+                        "flipped_y": false,
+                        "z": 1,
+                        "alignment": 4,
+                        "preserve size": false,
+                        "position": {
+                            "x": 0,
+                            "y": 185,
+                            "w": 1920,
+                            "h": 365
+                        },
+                        "rotation": 0.0,
+                        "impl": {
+                            "animation path": "intro/textlogo.yoyo"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "kitty",
+                "active": true,
+                "components": {
+                    "renderer": {
+                        "active": true,
+                        "type": 3,
+                        "flipped_x": false,
+                        "flipped_y": false,
+                        "z": 1,
+                        "alignment": 4,
+                        "preserve size": false,
+                        "position": {
+                            "x": 695,
+                            "y": 530,
+                            "w": 512,
+                            "h": 512
+                        },
+                        "rotation": 0.0,
+                        "impl": {
+                            "animation path": "intro/kitty/kitty.yoyo"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "controller",
+                "active": true,
+                "components": {
+                    "script": {
+                        "active": true,
+                        "handle": "intro/intro.lua"
+                    }
+                }
+            },
+            {
+                "name": "scene camera",
+                "active": true,
+                "components": {
+                    "transform": {
+                        "x": 0,
+                        "y": 0
+                    },
+                    "camera": {
+                        "active": true,
+                        "z": 9999,
+                        "view field": {
+                            "x": 0,
+                            "y": 0,
+                            "w": 1920,
+                            "h": 1080
+                        }
+                    }
+                }
+            }
+        ],
+        "music": {
+            "src": "intro/synth.mp3",
+            "loop": false,
+            "volume": 1.0
+        }
+    }
+}

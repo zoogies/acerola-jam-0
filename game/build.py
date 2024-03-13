@@ -74,7 +74,7 @@ class YoyoEngineBuildSystem:
         if self.build_settings["build_mode"] == "debug":
             self.build_cflags += " -g -Wall -Wextra"
         elif self.build_settings["build_mode"] == "release":
-            self.build_cflags += " -s -O3" # optimize heavily
+            self.build_cflags += " -s" # optimize heavily
 
         # we need the path to the engine, but only to specify its CMakeLists.txt
         self.build_engine_path = self.build_settings["engine_build_path"]

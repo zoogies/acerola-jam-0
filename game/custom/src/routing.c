@@ -15,7 +15,8 @@ enum scenes {
     ZOOGIES_INTRO,
     MAINMENU,
     INTRO_CUTSCENE,
-    LAB
+    LAB,
+    END
 };
 
 enum scenes current_scene;
@@ -70,7 +71,12 @@ void yoyo_scene_load(char *scene_name){
         if(last_scene == LAB){
             shutdown_player_controller();
             enemy_controller_shutdown();
+            // this is scuff but idc anymore
         }
+    }
+
+    if(strcmp(scene_name, "thanks") == 0){
+        current_scene = END;
     }
 }
 
@@ -111,7 +117,10 @@ void yoyo_pre_frame(){
         case LAB:
             player_controller_pre_frame();
             enemy_controller_update();
-        break;
+            break;
+        case END:
+            ye_unregister_all_timers(); // dumb hack but whatever
+            break;
     }
 }
 

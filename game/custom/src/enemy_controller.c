@@ -104,7 +104,7 @@ void create_new_enemy(float x, float y){
 
     ye_add_transform_component(enemy,x,y);
     
-    ye_add_image_renderer_component(enemy,50,"images/player/player.png");
+    ye_add_image_renderer_component(enemy,50,"images/player/theriacenemy.png");
     enemy->renderer->rect = (struct ye_rectf){0,0,150,150};
 
     ye_add_static_collider_component(enemy,(struct ye_rectf){0,0,150,150});
@@ -167,10 +167,10 @@ void kill_enemies_within(float px, float py, float pa){
         // printf("distance from player to enemy: %f\n",dist);
 
         // if the enemy is within 180 degree field of view of where player is looking
-        if(pa - 120 < player_to_enemy_angle && pa + 120 > player_to_enemy_angle){
+        if(true/*pa - 120 < player_to_enemy_angle && pa + 120 > player_to_enemy_angle*/){
             // printf("enemy is within view cone\n");
 
-            if(dist > 0 && dist < 250){
+            if(dist > 0 && dist < 350){
                 /*
                     Play a death animation and sound
                 */

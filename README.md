@@ -29,3 +29,13 @@ transform triggers and sensible binds
 lore drop clipboards all around (they exposed you as radiation on purpose)
 
 end cutscene police scene coverup ty for playing
+
+## list of transformations
+
+once before blue card
+
+once when walking to green card room location
+
+after grabbing keys
+
+one right before you reach the door - kickstarts ending
