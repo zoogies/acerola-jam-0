@@ -1,41 +1,18 @@
-# acerola-jam-0
+# Theriac (Acerola Jam 0 Submission)
 
-My entry into the acerola jam 0
+Theriac is a horror game developed in yoyoengine for the Acerola Jam 0.
 
-## notes
+You are a broke college student, newly diagnosed with brain cancer. It seems completely hopeless, until you receive a letter offering compensation for your time in a clinical trial- one that could also remove your brain tumor entirely. 
 
-- would be cool to have arm alternate its approach each time (just invert renderer and switch angle)
-- probably need to seperate the vectors for up and down collectively in physics calculations
-- COULD NOT REPLICATE: bug where if you walk into two colliders at once you phase
-- you berserk to get keybinds switched which is the only time you can attack
-  - you have a metetr which brings you back to normal binds later on as your HR decreases
+With nothing else to lose, you sign up.
 
-## ideas
+Play it here: <https://zoogies.itch.io/theriac>
 
-increasing amount of blood dripping until you get to door with key, then binds change to nothing. cant move and you realize and die
+## Preview
 
-## big remaining tasks
-
-enemies spawn and transform triggers
-
-bloody vignette is messed up
-
-enemies hit you and deal damage
-
-ending condition keys on door
-
-transform triggers and sensible binds
-
-lore drop clipboards all around (they exposed you as radiation on purpose)
-
-end cutscene police scene coverup ty for playing
-
-## list of transformations
-
-once before blue card
-
-once when walking to green card room location
-
-after grabbing keys
-
-one right before you reach the door - kickstarts ending
+![rcfheg](https://github.com/zoogies/acerola-jam-0/assets/43967290/7709f11b-7aa5-4f0a-88ae-1ebb688046ad)
+![8j9YX9](https://github.com/zoogies/acerola-jam-0/assets/43967290/59b34c2a-45dc-447a-8ed1-8cc8f88137f7)
+![X97t1Z](https://github.com/zoogies/acerola-jam-0/assets/43967290/9b47848a-e409-4c68-8ed9-27ab7b50dca4)
+![aTJk+l](https://github.com/zoogies/acerola-jam-0/assets/43967290/116ddbee-6857-4351-b7b5-09bfefaa3792)
+![xBmhTh](https://github.com/zoogies/acerola-jam-0/assets/43967290/cfcb24c9-3fcd-4852-8f74-5b144a225510)
+![lBjp6m](https://github.com/zoogies/acerola-jam-0/assets/43967290/512d244f-98d2-439c-8f48-aab422eab6bf)
